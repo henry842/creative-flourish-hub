@@ -98,3 +98,17 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
   }
 }
+
+@media print {
+  .print-hide, header, nav, [data-sidebar], .sidebar, button {
+    display: none !important;
+  }
+  .print-section {
+    display: grid !important;
+    break-inside: avoid;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}

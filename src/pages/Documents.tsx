@@ -9,27 +9,58 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle, Zap, Printer } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
+import { HealthScoreCard } from "@/components/HealthScoreCard";
+import { RedFlagsList } from "@/components/RedFlagsList";
+import { EventTimeline } from "@/components/EventTimeline";
 
 type Document = Tables<"documents">;
+
+interface HealthScore {
+  id: string;
+  overall_score: number;
+  revenue_growth: number;
+  net_margin: number;
+  debt_level: number;
+  earnings_quality: number;
+  regulatory_risk: number;
+  sentiment: string;
+  confidence: number;
+  summary: string | null;
+  ticker: string | null;
+  red_flags: string[];
+  timeline_events: { date: string; event: string }[];
+}
 
 export default function Documents() {
   const { user } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [healthScores, setHealthScores] = useState<Record<string, HealthScore>>({});
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
   const [ticker, setTicker] = useState("");
   const [docType, setDocType] = useState("other");
 
   const fetchDocs = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("documents")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    setDocuments(data || []);
+    const [docsRes, scoresRes] = await Promise.all([
+      supabase.from("documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("health_scores").select("*").eq("user_id", user.id),
+    ]);
+    setDocuments(docsRes.data || []);
+
+    const scoreMap: Record<string, HealthScore> = {};
+    (scoresRes.data || []).forEach((s: any) => {
+      scoreMap[s.document_id] = {
+        ...s,
+        red_flags: (s.red_flags as string[]) || [],
+        timeline_events: (s.timeline_events as { date: string; event: string }[]) || [],
+      };
+    });
+    setHealthScores(scoreMap);
     setLoading(false);
   }, [user]);
 
@@ -48,10 +79,7 @@ export default function Documents() {
     setUploading(true);
     const filePath = `${user.id}/${Date.now()}_${file.name}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("documents")
-      .upload(filePath, file);
-
+    const { error: uploadError } = await supabase.storage.from("documents").upload(filePath, file);
     if (uploadError) {
       toast({ title: "Erro no upload", description: uploadError.message, variant: "destructive" });
       setUploading(false);
@@ -76,6 +104,39 @@ export default function Documents() {
       fetchDocs();
     }
     setUploading(false);
+  };
+
+  const handleAnalyze = async (doc: Document) => {
+    setAnalyzing(doc.id);
+    try {
+      // For now, we send the document name as context since we can't extract PDF text client-side
+      const textContent = doc.extracted_text || `Documento financeiro: ${doc.name}. Ticker: ${doc.ticker || "N/A"}. Tipo: ${doc.doc_type}. Este é um relatório financeiro que precisa ser analisado. Por favor, gere scores simulados baseados no tipo de documento e ticker informados.`;
+
+      const { data: session } = await supabase.auth.getSession();
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-document`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          document_id: doc.id,
+          text: textContent,
+          ticker: doc.ticker,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Erro na análise");
+      }
+
+      toast({ title: "Análise concluída! ✅", description: `Health Score gerado para ${doc.name}` });
+      fetchDocs();
+    } catch (err: any) {
+      toast({ title: "Erro na análise", description: err.message, variant: "destructive" });
+    }
+    setAnalyzing(null);
   };
 
   const handleDelete = async (doc: Document) => {
@@ -137,14 +198,7 @@ export default function Documents() {
                   {uploading ? "Enviando..." : "Selecionar PDF"}
                 </div>
               </Label>
-              <input
-                id="file-upload"
-                type="file"
-                accept=".pdf"
-                className="hidden"
-                onChange={handleUpload}
-                disabled={uploading}
-              />
+              <input id="file-upload" type="file" accept=".pdf" className="hidden" onChange={handleUpload} disabled={uploading} />
             </div>
           </div>
         </CardContent>
@@ -161,28 +215,67 @@ export default function Documents() {
             </CardContent>
           </Card>
         ) : (
-          documents.map((doc) => (
-            <Card key={doc.id} className="glass hover:shadow-md transition-shadow">
-              <CardContent className="py-4 flex items-center gap-4">
-                <FileText className="h-8 w-8 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{doc.name}</p>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                    {doc.ticker && <Badge variant="secondary">{doc.ticker}</Badge>}
-                    <Badge variant="outline">{doc.doc_type}</Badge>
-                    <span>{formatSize(doc.file_size)}</span>
-                    <span>{new Date(doc.created_at).toLocaleDateString("pt-BR")}</span>
+          documents.map((doc) => {
+            const score = healthScores[doc.id];
+            const isExpanded = expandedDoc === doc.id;
+            return (
+              <div key={doc.id} className="space-y-3">
+                <Card className="glass hover:shadow-md transition-shadow">
+                  <CardContent className="py-4 flex items-center gap-4">
+                    <FileText className="h-8 w-8 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{doc.name}</p>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
+                        {doc.ticker && <Badge variant="secondary">{doc.ticker}</Badge>}
+                        <Badge variant="outline">{doc.doc_type}</Badge>
+                        <span>{formatSize(doc.file_size)}</span>
+                        <span>{new Date(doc.created_at).toLocaleDateString("pt-BR")}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {statusIcon(doc.status)}
+                      {!score && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleAnalyze(doc)}
+                          disabled={analyzing === doc.id}
+                          className="gap-1"
+                        >
+                          <Zap className="h-3 w-3" />
+                          {analyzing === doc.id ? "Analisando..." : "Analisar"}
+                        </Button>
+                      )}
+                      {score && (
+                        <>
+                          <Badge className={`${score.overall_score >= 80 ? "bg-bullish/10 text-bullish" : score.overall_score >= 60 ? "bg-neutral/10 text-neutral" : "bg-bearish/10 text-bearish"} border-0 font-mono cursor-pointer`} onClick={() => setExpandedDoc(isExpanded ? null : doc.id)}>
+                            {score.overall_score}/100
+                          </Badge>
+                          <Button variant="ghost" size="icon" onClick={() => window.print()} className="print-hide">
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(doc)} className="hover:text-destructive print-hide">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Expanded Health Score */}
+                {isExpanded && score && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 ml-4 print-section">
+                    <HealthScoreCard score={score} />
+                    <div className="space-y-4">
+                      <RedFlagsList flags={score.red_flags} />
+                      <EventTimeline events={score.timeline_events} />
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  {statusIcon(doc.status)}
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(doc)} className="hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>

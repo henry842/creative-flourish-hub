@@ -80,6 +80,71 @@ export type Database = {
         }
         Relationships: []
       }
+      health_scores: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          debt_level: number
+          document_id: string | null
+          earnings_quality: number
+          id: string
+          net_margin: number
+          overall_score: number
+          red_flags: Json | null
+          regulatory_risk: number
+          revenue_growth: number
+          sentiment: string | null
+          summary: string | null
+          ticker: string | null
+          timeline_events: Json | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          debt_level?: number
+          document_id?: string | null
+          earnings_quality?: number
+          id?: string
+          net_margin?: number
+          overall_score?: number
+          red_flags?: Json | null
+          regulatory_risk?: number
+          revenue_growth?: number
+          sentiment?: string | null
+          summary?: string | null
+          ticker?: string | null
+          timeline_events?: Json | null
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          debt_level?: number
+          document_id?: string | null
+          earnings_quality?: number
+          id?: string
+          net_margin?: number
+          overall_score?: number
+          red_flags?: Json | null
+          regulatory_risk?: number
+          revenue_growth?: number
+          sentiment?: string | null
+          summary?: string | null
+          ticker?: string | null
+          timeline_events?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_scores_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
