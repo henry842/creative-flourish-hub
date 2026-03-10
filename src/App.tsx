@@ -52,6 +52,8 @@ const App = () => (
               <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
               <Route path="/sentiment" element={<ProtectedRoute><Sentiment /></ProtectedRoute>} />
               <Route path="/compare" element={<ProtectedRoute><Compare /></ProtectedRoute>} />
+              <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+              <Route path="/pricing" element={<PublicRoute><Pricing /></PublicRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

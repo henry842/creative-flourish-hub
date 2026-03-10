@@ -47,6 +47,9 @@ export default function Landing() {
             <Button size="lg" onClick={() => navigate("/auth")} className="font-display text-lg px-8">
               Comece Grátis 🚀
             </Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/pricing")} className="font-display text-lg px-8">
+              Ver Planos
+            </Button>
           </div>
         </div>
       </header>

@@ -23,6 +23,7 @@ const navItems = [
   { title: "Chat IA", url: "/chat", icon: MessageSquare },
   { title: "Sentimento", url: "/sentiment", icon: TrendingUp },
   { title: "Comparar", url: "/compare", icon: Swords },
+  { title: "Ranking", url: "/ranking", icon: Trophy },
 ];
 
 export function AppSidebar() {
