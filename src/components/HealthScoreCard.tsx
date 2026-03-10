@@ -14,6 +14,9 @@ interface HealthScore {
   confidence: number;
   summary: string | null;
   ticker: string | null;
+  price_target_low?: number | null;
+  price_target_high?: number | null;
+  price_target_rationale?: string | null;
 }
 
 function scoreColor(score: number) {
