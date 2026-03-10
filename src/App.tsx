@@ -15,6 +15,8 @@ import Documents from "./pages/Documents";
 import Chat from "./pages/Chat";
 import Sentiment from "./pages/Sentiment";
 import Compare from "./pages/Compare";
+import Ranking from "./pages/Ranking";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
