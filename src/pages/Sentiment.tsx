@@ -39,7 +39,11 @@ export default function Sentiment() {
         .eq("user_id", user.id)
         .not("ticker", "is", null)
         .order("created_at", { ascending: true }),
-    ]).then(([sentRes, scoresRes]) => {
+      supabase
+        .from("watchlist")
+        .select("ticker")
+        .eq("user_id", user.id),
+    ]).then(([sentRes, scoresRes, watchRes]) => {
       setAnalyses(sentRes.data || []);
 
       const history: Record<string, ScorePoint[]> = {};
@@ -52,9 +56,23 @@ export default function Sentiment() {
         });
       });
       setScoreHistory(history);
+      setWatchlistTickers(new Set((watchRes.data || []).map((w: any) => w.ticker)));
       setLoading(false);
     });
   }, [user]);
+
+  const toggleWatchlist = async (tickerName: string) => {
+    if (!user || !tickerName) return;
+    if (watchlistTickers.has(tickerName)) {
+      await supabase.from("watchlist").delete().eq("user_id", user.id).eq("ticker", tickerName);
+      setWatchlistTickers((prev) => { const n = new Set(prev); n.delete(tickerName); return n; });
+      toast({ title: `${tickerName} removido da watchlist` });
+    } else {
+      await supabase.from("watchlist").insert({ user_id: user.id, ticker: tickerName });
+      setWatchlistTickers((prev) => new Set(prev).add(tickerName));
+      toast({ title: `${tickerName} adicionado à watchlist ⭐` });
+    }
+  };
 
   const sentimentConfig = {
     bullish: { icon: TrendingUp, color: "text-bullish", bg: "bg-bullish/10", label: "Bullish" },
