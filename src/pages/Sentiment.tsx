@@ -5,26 +5,52 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Tables } from "@/integrations/supabase/types";
 
 type SentimentAnalysis = Tables<"sentiment_analyses">;
 
+interface ScorePoint {
+  date: string;
+  score: number;
+}
+
 export default function Sentiment() {
   const { user } = useAuth();
   const [analyses, setAnalyses] = useState<SentimentAnalysis[]>([]);
+  const [scoreHistory, setScoreHistory] = useState<Record<string, ScorePoint[]>>({});
+  const [expandedTicker, setExpandedTicker] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("sentiment_analyses")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setAnalyses(data || []);
-        setLoading(false);
+    Promise.all([
+      supabase
+        .from("sentiment_analyses")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("health_scores")
+        .select("ticker, overall_score, created_at")
+        .eq("user_id", user.id)
+        .not("ticker", "is", null)
+        .order("created_at", { ascending: true }),
+    ]).then(([sentRes, scoresRes]) => {
+      setAnalyses(sentRes.data || []);
+
+      const history: Record<string, ScorePoint[]> = {};
+      (scoresRes.data || []).forEach((s) => {
+        const t = s.ticker!;
+        if (!history[t]) history[t] = [];
+        history[t].push({
+          date: new Date(s.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+          score: s.overall_score,
+        });
       });
+      setScoreHistory(history);
+      setLoading(false);
+    });
   }, [user]);
 
   const sentimentConfig = {
@@ -33,7 +59,6 @@ export default function Sentiment() {
     neutral: { icon: Minus, color: "text-neutral", bg: "bg-neutral/10", label: "Neutro" },
   };
 
-  // Group by ticker
   const byTicker: Record<string, SentimentAnalysis[]> = {};
   analyses.forEach((a) => {
     const key = a.ticker || "Sem ticker";
@@ -77,9 +102,15 @@ export default function Sentiment() {
               const topSentiment = Object.entries(dominant).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof sentimentConfig;
               const cfg = sentimentConfig[topSentiment];
               const Icon = cfg.icon;
+              const hasHistory = scoreHistory[ticker] && scoreHistory[ticker].length > 1;
 
               return (
-                <Card key={ticker} className={`glass hover:shadow-lg transition-shadow border-l-4`} style={{ borderLeftColor: `hsl(var(--${topSentiment}))` }}>
+                <Card
+                  key={ticker}
+                  className={`glass hover:shadow-lg transition-shadow border-l-4 cursor-pointer`}
+                  style={{ borderLeftColor: `hsl(var(--${topSentiment}))` }}
+                  onClick={() => setExpandedTicker(expandedTicker === ticker ? null : ticker)}
+                >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="font-display text-lg">{ticker}</CardTitle>
@@ -95,6 +126,40 @@ export default function Sentiment() {
                       <Badge className="bg-neutral/10 text-neutral border-0">{dominant.neutral} neutro</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{items.length} análises</p>
+                    {hasHistory && (
+                      <p className="text-xs text-primary mt-1">
+                        {expandedTicker === ticker ? "▲ Fechar gráfico" : "▼ Ver evolução do score"}
+                      </p>
+                    )}
+
+                    {/* Score Evolution Chart */}
+                    {expandedTicker === ticker && hasHistory && (
+                      <div className="mt-4 pt-4 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
+                        <p className="text-xs text-muted-foreground mb-2 font-medium">Evolução do Health Score</p>
+                        <ResponsiveContainer width="100%" height={160}>
+                          <LineChart data={scoreHistory[ticker]}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis dataKey="date" fontSize={10} stroke="hsl(var(--muted-foreground))" />
+                            <YAxis domain={[0, 100]} fontSize={10} stroke="hsl(var(--muted-foreground))" />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "hsl(var(--card))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "var(--radius)",
+                                fontSize: 12,
+                              }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="score"
+                              stroke="hsl(var(--primary))"
+                              strokeWidth={2}
+                              dot={{ fill: "hsl(var(--primary))", r: 3 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
