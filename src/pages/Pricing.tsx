@@ -113,7 +113,13 @@ export default function Pricing() {
                   ))}
                 </ul>
                 <Button
-                  onClick={() => navigate("/auth")}
+                  onClick={() => {
+                    if (plan.name === "Free") {
+                      navigate("/auth");
+                    } else {
+                      window.open("https://wa.me/5571992683093?text=" + encodeURIComponent(`Olá! Tenho interesse no plano ${plan.name} do FinSight AI.`), "_blank");
+                    }
+                  }}
                   className="w-full font-display"
                   variant={plan.highlight ? "default" : "outline"}
                 >
