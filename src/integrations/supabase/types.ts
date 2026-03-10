@@ -90,6 +90,9 @@ export type Database = {
           id: string
           net_margin: number
           overall_score: number
+          price_target_high: number | null
+          price_target_low: number | null
+          price_target_rationale: string | null
           red_flags: Json | null
           regulatory_risk: number
           revenue_growth: number
@@ -108,6 +111,9 @@ export type Database = {
           id?: string
           net_margin?: number
           overall_score?: number
+          price_target_high?: number | null
+          price_target_low?: number | null
+          price_target_rationale?: string | null
           red_flags?: Json | null
           regulatory_risk?: number
           revenue_growth?: number
@@ -126,6 +132,9 @@ export type Database = {
           id?: string
           net_margin?: number
           overall_score?: number
+          price_target_high?: number | null
+          price_target_low?: number | null
+          price_target_rationale?: string | null
           red_flags?: Json | null
           regulatory_risk?: number
           revenue_growth?: number
@@ -244,6 +253,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      watchlist: {
+        Row: {
+          created_at: string
+          id: string
+          ticker: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ticker: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ticker?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
