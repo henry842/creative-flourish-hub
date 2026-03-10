@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle, Zap, Printer } from "lucide-react";
+import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle, Zap, Printer, Star, RefreshCw } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { HealthScoreCard } from "@/components/HealthScoreCard";
 import { RedFlagsList } from "@/components/RedFlagsList";
@@ -31,6 +31,9 @@ interface HealthScore {
   ticker: string | null;
   red_flags: string[];
   timeline_events: { date: string; event: string }[];
+  price_target_low?: number | null;
+  price_target_high?: number | null;
+  price_target_rationale?: string | null;
 }
 
 export default function Documents() {
@@ -43,12 +46,14 @@ export default function Documents() {
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
   const [ticker, setTicker] = useState("");
   const [docType, setDocType] = useState("other");
+  const [watchlistTickers, setWatchlistTickers] = useState<Set<string>>(new Set());
 
   const fetchDocs = useCallback(async () => {
     if (!user) return;
-    const [docsRes, scoresRes] = await Promise.all([
+    const [docsRes, scoresRes, watchRes] = await Promise.all([
       supabase.from("documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("health_scores").select("*").eq("user_id", user.id),
+      supabase.from("watchlist").select("ticker").eq("user_id", user.id),
     ]);
     setDocuments(docsRes.data || []);
 
@@ -61,12 +66,26 @@ export default function Documents() {
       };
     });
     setHealthScores(scoreMap);
+    setWatchlistTickers(new Set((watchRes.data || []).map((w: any) => w.ticker)));
     setLoading(false);
   }, [user]);
 
   useEffect(() => {
     fetchDocs();
   }, [fetchDocs]);
+
+  const toggleWatchlist = async (tickerName: string) => {
+    if (!user || !tickerName) return;
+    if (watchlistTickers.has(tickerName)) {
+      await supabase.from("watchlist").delete().eq("user_id", user.id).eq("ticker", tickerName);
+      setWatchlistTickers((prev) => { const n = new Set(prev); n.delete(tickerName); return n; });
+      toast({ title: `${tickerName} removido da watchlist` });
+    } else {
+      await supabase.from("watchlist").insert({ user_id: user.id, ticker: tickerName });
+      setWatchlistTickers((prev) => new Set(prev).add(tickerName));
+      toast({ title: `${tickerName} adicionado à watchlist ⭐` });
+    }
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -109,7 +128,6 @@ export default function Documents() {
   const handleAnalyze = async (doc: Document) => {
     setAnalyzing(doc.id);
     try {
-      // For now, we send the document name as context since we can't extract PDF text client-side
       const textContent = doc.extracted_text || `Documento financeiro: ${doc.name}. Ticker: ${doc.ticker || "N/A"}. Tipo: ${doc.doc_type}. Este é um relatório financeiro que precisa ser analisado. Por favor, gere scores simulados baseados no tipo de documento e ticker informados.`;
 
       const { data: session } = await supabase.auth.getSession();
@@ -233,6 +251,18 @@ export default function Documents() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      {/* Watchlist star */}
+                      {doc.ticker && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => toggleWatchlist(doc.ticker!)}
+                          className="print-hide"
+                          title={watchlistTickers.has(doc.ticker) ? "Remover da watchlist" : "Adicionar à watchlist"}
+                        >
+                          <Star className={`h-4 w-4 ${watchlistTickers.has(doc.ticker) ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
+                        </Button>
+                      )}
                       {statusIcon(doc.status)}
                       {!score && (
                         <Button
@@ -251,6 +281,16 @@ export default function Documents() {
                           <Badge className={`${score.overall_score >= 80 ? "bg-bullish/10 text-bullish" : score.overall_score >= 60 ? "bg-neutral/10 text-neutral" : "bg-bearish/10 text-bearish"} border-0 font-mono cursor-pointer`} onClick={() => setExpandedDoc(isExpanded ? null : doc.id)}>
                             {score.overall_score}/100
                           </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAnalyze(doc)}
+                            disabled={analyzing === doc.id}
+                            className="gap-1 print-hide"
+                          >
+                            <RefreshCw className={`h-3 w-3 ${analyzing === doc.id ? "animate-spin" : ""}`} />
+                            {analyzing === doc.id ? "Re-analisando..." : "Re-analisar"}
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => window.print()} className="print-hide">
                             <Printer className="h-4 w-4" />
                           </Button>
