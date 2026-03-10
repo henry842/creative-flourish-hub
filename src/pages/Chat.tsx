@@ -7,8 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Send, Plus, MessageSquare, Bot, User } from "lucide-react";
+import { Send, Plus, MessageSquare, Bot, User, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
+} from "@/components/ui/dialog";
 
 interface Message {
   id?: string;
@@ -23,6 +26,19 @@ interface Conversation {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
+const GLOSSARY = [
+  { term: "P/E Ratio", desc: "Preço da ação dividido pelo lucro por ação — indica se está cara ou barata" },
+  { term: "EBITDA", desc: "Lucro antes de juros, impostos, depreciação e amortização — mostra o resultado operacional" },
+  { term: "ROE", desc: "Retorno sobre patrimônio líquido — quanto de lucro a empresa gera com o dinheiro dos acionistas" },
+  { term: "Margem Líquida", desc: "Percentual de lucro que sobra de cada real de receita após todos os custos" },
+  { term: "EPS", desc: "Lucro por ação — quanto cada ação gerou de lucro no período" },
+  { term: "Market Cap", desc: "Valor de mercado total da empresa — preço da ação × número de ações" },
+  { term: "Dividend Yield", desc: "Percentual de dividendos pagos em relação ao preço da ação" },
+  { term: "Free Cash Flow", desc: "Caixa livre gerado pela operação após investimentos — dinheiro real disponível" },
+  { term: "ROIC", desc: "Retorno sobre capital investido — eficiência na geração de lucro com todo capital empregado" },
+  { term: "Alavancagem", desc: "Proporção de dívida usada para financiar a empresa — maior = mais risco" },
+];
 
 export default function Chat() {
   const { user } = useAuth();
@@ -88,21 +104,18 @@ export default function Chat() {
     setInput("");
     setIsStreaming(true);
 
-    // Save user message
     await supabase.from("messages").insert({
       conversation_id: activeConv,
       role: "user",
       content: userMsg.content,
     });
 
-    // Update conversation title if first message
     if (messages.length === 0) {
       const title = userMsg.content.slice(0, 60);
       await supabase.from("conversations").update({ title }).eq("id", activeConv);
       setConversations((prev) => prev.map((c) => (c.id === activeConv ? { ...c, title } : c)));
     }
 
-    // Stream AI response
     let assistantContent = "";
     try {
       const allMessages = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
@@ -164,7 +177,6 @@ export default function Chat() {
         }
       }
 
-      // Save assistant message
       if (assistantContent) {
         await supabase.from("messages").insert({
           conversation_id: activeConv,
@@ -182,9 +194,32 @@ export default function Chat() {
     <div className="flex gap-4 h-[calc(100vh-8rem)]">
       {/* Sidebar conversations */}
       <div className="w-64 shrink-0 hidden lg:flex flex-col gap-2">
-        <Button onClick={createConversation} className="w-full gap-2">
-          <Plus className="h-4 w-4" /> Nova conversa
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={createConversation} className="flex-1 gap-2">
+            <Plus className="h-4 w-4" /> Nova conversa
+          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" title="Glossário Financeiro">
+                <BookOpen className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="font-display flex items-center gap-2">📖 Glossário Financeiro</DialogTitle>
+                <DialogDescription>Os 10 termos mais importantes usados no app</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 mt-2">
+                {GLOSSARY.map((item) => (
+                  <div key={item.term} className="rounded-lg bg-muted/50 p-3">
+                    <p className="font-medium text-sm">{item.term}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
         <ScrollArea className="flex-1">
           <div className="space-y-1 pr-2">
             {loadingConvs ? (
@@ -212,15 +247,60 @@ export default function Chat() {
         <CardContent className="flex-1 flex flex-col p-4 min-h-0">
           {!activeConv ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-4">
+              <div className="text-center space-y-6 max-w-lg">
                 <Bot className="h-16 w-16 mx-auto text-primary/50" />
                 <h2 className="font-display text-xl font-semibold">FinSight AI Chat</h2>
-                <p className="text-muted-foreground max-w-md">
+                <p className="text-muted-foreground">
                   Faça perguntas sobre seus documentos financeiros, analise relatórios e obtenha insights de mercado.
                 </p>
-                <Button onClick={createConversation} className="gap-2 lg:hidden">
-                  <Plus className="h-4 w-4" /> Nova conversa
-                </Button>
+
+                {/* Example conversation */}
+                <div className="text-left space-y-3 rounded-xl bg-muted/30 p-4 border border-border/50">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Exemplo de conversa</p>
+                  <div className="flex gap-2 justify-end">
+                    <div className="bg-primary text-primary-foreground rounded-xl px-3 py-2 text-sm max-w-[75%]">
+                      Qual o maior risco do relatório da NVDA?
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                      <User className="h-3 w-3 text-secondary-foreground" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Bot className="h-3 w-3 text-primary" />
+                    </div>
+                    <div className="bg-muted rounded-xl px-3 py-2 text-sm max-w-[75%] text-muted-foreground">
+                      O principal risco é a alta dependência do segmento de data centers, que representa 83% da receita...
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-center">
+                  <Button onClick={createConversation} className="gap-2">
+                    <Plus className="h-4 w-4" /> Nova conversa
+                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="gap-2 lg:hidden">
+                        <BookOpen className="h-4 w-4" /> Glossário
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="font-display flex items-center gap-2">📖 Glossário Financeiro</DialogTitle>
+                        <DialogDescription>Os 10 termos mais importantes usados no app</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-3 mt-2">
+                        {GLOSSARY.map((item) => (
+                          <div key={item.term} className="rounded-lg bg-muted/50 p-3">
+                            <p className="font-medium text-sm">{item.term}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
             </div>
           ) : (
@@ -271,7 +351,6 @@ export default function Chat() {
                 </div>
               </ScrollArea>
 
-              {/* Suggested questions */}
               {messages.length === 0 && !isStreaming && (
                 <div className="flex flex-wrap gap-2 pb-2">
                   {[

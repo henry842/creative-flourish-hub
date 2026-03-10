@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus, Shield } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Shield, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface HealthScore {
   overall_score: number;
@@ -38,12 +38,25 @@ function scoreEmoji(score: number) {
 }
 
 const categories = [
-  { key: "revenue_growth" as const, label: "Crescimento de Receita" },
-  { key: "net_margin" as const, label: "Margem Líquida" },
-  { key: "debt_level" as const, label: "Nível de Endividamento" },
-  { key: "earnings_quality" as const, label: "Qualidade dos Lucros" },
-  { key: "regulatory_risk" as const, label: "Risco Regulatório" },
+  { key: "revenue_growth" as const, label: "Crescimento de Receita", tooltip: "Velocidade de crescimento das vendas da empresa em relação a períodos anteriores" },
+  { key: "net_margin" as const, label: "Margem Líquida", tooltip: "Percentual de lucro que sobra de cada real de receita após todos os custos" },
+  { key: "debt_level" as const, label: "Nível de Endividamento", tooltip: "Proporção de dívida em relação ao patrimônio — quanto menor, mais saudável" },
+  { key: "earnings_quality" as const, label: "Qualidade dos Lucros", tooltip: "Avalia se os lucros são recorrentes e sustentáveis, não apenas contábeis" },
+  { key: "regulatory_risk" as const, label: "Risco Regulatório", tooltip: "Exposição da empresa a mudanças em leis, regulações e políticas governamentais" },
 ];
+
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help shrink-0" />
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-[240px] text-xs">
+        {text}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function HealthScoreCard({ score }: { score: HealthScore }) {
   const sentimentConfig = {
@@ -56,87 +69,95 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
   const SentimentIcon = cfg.icon;
 
   return (
-    <Card className="glass overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="font-display text-lg flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            Financial Health Score
-          </CardTitle>
-          {score.ticker && <Badge variant="secondary" className="font-mono">{score.ticker}</Badge>}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {/* Overall Score */}
-        <div className="flex items-center gap-6">
-          <div className="relative flex items-center justify-center">
-            <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
-              <circle
-                cx="50" cy="50" r="42" fill="none"
-                stroke={score.overall_score >= 80 ? "hsl(var(--bullish))" : score.overall_score >= 60 ? "hsl(var(--neutral))" : "hsl(var(--bearish))"}
-                strokeWidth="8" strokeLinecap="round"
-                strokeDasharray={`${(score.overall_score / 100) * 264} 264`}
-                className="transition-all duration-1000"
-              />
-            </svg>
-            <span className={`absolute text-2xl font-display font-bold ${scoreColor(score.overall_score)}`}>
-              {score.overall_score}
-            </span>
+    <TooltipProvider delayDuration={200}>
+      <Card className="glass overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="font-display text-lg flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Financial Health Score
+              <InfoTooltip text="Nota de 0-100 gerada pela IA baseada nos fundamentos do documento" />
+            </CardTitle>
+            {score.ticker && <Badge variant="secondary" className="font-mono">{score.ticker}</Badge>}
           </div>
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground mb-1">Score Geral {scoreEmoji(score.overall_score)}</p>
-            <div className="flex items-center gap-2">
-              <SentimentIcon className={`h-4 w-4 ${cfg.color}`} />
-              <span className={`text-sm font-medium ${cfg.color}`}>{cfg.label}</span>
-              <span className="text-xs text-muted-foreground">
-                ({(score.confidence * 100).toFixed(0)}% confiança)
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Overall Score */}
+          <div className="flex items-center gap-6">
+            <div className="relative flex items-center justify-center">
+              <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
+                <circle
+                  cx="50" cy="50" r="42" fill="none"
+                  stroke={score.overall_score >= 80 ? "hsl(var(--bullish))" : score.overall_score >= 60 ? "hsl(var(--neutral))" : "hsl(var(--bearish))"}
+                  strokeWidth="8" strokeLinecap="round"
+                  strokeDasharray={`${(score.overall_score / 100) * 264} 264`}
+                  className="transition-all duration-1000"
+                />
+              </svg>
+              <span className={`absolute text-2xl font-display font-bold ${scoreColor(score.overall_score)}`}>
+                {score.overall_score}
               </span>
             </div>
-            {score.summary && (
-              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{score.summary}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Category Bars */}
-        <div className="space-y-3">
-          {categories.map(({ key, label }) => {
-            const val = score[key];
-            return (
-              <div key={key} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{label}</span>
-                  <span className={`font-medium ${scoreColor(val)}`}>
-                    {val}/100 {scoreEmoji(val)}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ${scoreBg(val)}`}
-                    style={{ width: `${val}%` }}
-                  />
-                </div>
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground mb-1">Score Geral {scoreEmoji(score.overall_score)}</p>
+              <div className="flex items-center gap-2">
+                <SentimentIcon className={`h-4 w-4 ${cfg.color}`} />
+                <span className={`text-sm font-medium ${cfg.color}`}>{cfg.label}</span>
+                <InfoTooltip text="Tom geral do documento — positivo, negativo ou neutro" />
+                <span className="text-xs text-muted-foreground">
+                  ({(score.confidence * 100).toFixed(0)}% confiança)
+                </span>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Price Target */}
-        {score.price_target_low && score.price_target_high && score.price_target_low > 0 && score.price_target_high > 0 && (
-          <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">🎯 Price Target</span>
-              <Badge variant="secondary" className="font-mono text-xs">
-                {score.price_target_low} – {score.price_target_high}
-              </Badge>
+              {score.summary && (
+                <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{score.summary}</p>
+              )}
             </div>
-            {score.price_target_rationale && (
-              <p className="text-xs text-muted-foreground">{score.price_target_rationale}</p>
-            )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Category Bars */}
+          <div className="space-y-3">
+            {categories.map(({ key, label, tooltip }) => {
+              const val = score[key];
+              return (
+                <div key={key} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      {label}
+                      <InfoTooltip text={tooltip} />
+                    </span>
+                    <span className={`font-medium ${scoreColor(val)}`}>
+                      {val}/100 {scoreEmoji(val)}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${scoreBg(val)}`}
+                      style={{ width: `${val}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Price Target */}
+          {score.price_target_low && score.price_target_high && score.price_target_low > 0 && score.price_target_high > 0 && (
+            <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">🎯 Price Target</span>
+                <InfoTooltip text="Faixa de preço estimada pela IA com base nos fundamentos" />
+                <Badge variant="secondary" className="font-mono text-xs">
+                  {score.price_target_low} – {score.price_target_high}
+                </Badge>
+              </div>
+              {score.price_target_rationale && (
+                <p className="text-xs text-muted-foreground">{score.price_target_rationale}</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }
