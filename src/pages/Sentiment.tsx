@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Star } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Tables } from "@/integrations/supabase/types";
+import { toast } from "@/hooks/use-toast";
 
 type SentimentAnalysis = Tables<"sentiment_analyses">;
 
@@ -20,6 +22,7 @@ export default function Sentiment() {
   const [analyses, setAnalyses] = useState<SentimentAnalysis[]>([]);
   const [scoreHistory, setScoreHistory] = useState<Record<string, ScorePoint[]>>({});
   const [expandedTicker, setExpandedTicker] = useState<string | null>(null);
+  const [watchlistTickers, setWatchlistTickers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,7 +39,11 @@ export default function Sentiment() {
         .eq("user_id", user.id)
         .not("ticker", "is", null)
         .order("created_at", { ascending: true }),
-    ]).then(([sentRes, scoresRes]) => {
+      supabase
+        .from("watchlist")
+        .select("ticker")
+        .eq("user_id", user.id),
+    ]).then(([sentRes, scoresRes, watchRes]) => {
       setAnalyses(sentRes.data || []);
 
       const history: Record<string, ScorePoint[]> = {};
@@ -49,9 +56,23 @@ export default function Sentiment() {
         });
       });
       setScoreHistory(history);
+      setWatchlistTickers(new Set((watchRes.data || []).map((w: any) => w.ticker)));
       setLoading(false);
     });
   }, [user]);
+
+  const toggleWatchlist = async (tickerName: string) => {
+    if (!user || !tickerName) return;
+    if (watchlistTickers.has(tickerName)) {
+      await supabase.from("watchlist").delete().eq("user_id", user.id).eq("ticker", tickerName);
+      setWatchlistTickers((prev) => { const n = new Set(prev); n.delete(tickerName); return n; });
+      toast({ title: `${tickerName} removido da watchlist` });
+    } else {
+      await supabase.from("watchlist").insert({ user_id: user.id, ticker: tickerName });
+      setWatchlistTickers((prev) => new Set(prev).add(tickerName));
+      toast({ title: `${tickerName} adicionado à watchlist ⭐` });
+    }
+  };
 
   const sentimentConfig = {
     bullish: { icon: TrendingUp, color: "text-bullish", bg: "bg-bullish/10", label: "Bullish" },
@@ -113,7 +134,20 @@ export default function Sentiment() {
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="font-display text-lg">{ticker}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="font-display text-lg">{ticker}</CardTitle>
+                        {ticker !== "Sem ticker" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => { e.stopPropagation(); toggleWatchlist(ticker); }}
+                            title={watchlistTickers.has(ticker) ? "Remover da watchlist" : "Adicionar à watchlist"}
+                          >
+                            <Star className={`h-4 w-4 ${watchlistTickers.has(ticker) ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
+                          </Button>
+                        )}
+                      </div>
                       <div className={`p-2 rounded-full ${cfg.bg}`}>
                         <Icon className={`h-4 w-4 ${cfg.color}`} />
                       </div>
