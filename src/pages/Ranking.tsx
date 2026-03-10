@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, TrendingUp, TrendingDown, Minus, Medal } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Minus, Medal, FileText, Zap } from "lucide-react";
 
 interface RankedCompany {
   ticker: string;
@@ -80,12 +80,32 @@ export default function Ranking() {
         </div>
       ) : companies.length === 0 ? (
         <Card className="glass">
-          <CardContent className="py-12 text-center">
-            <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Nenhuma empresa analisada ainda.</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Analise documentos financeiros para ver o ranking aqui.
+          <CardContent className="py-16 text-center">
+            <Trophy className="h-16 w-16 mx-auto text-muted-foreground/40 mb-6" />
+            <h3 className="font-display text-xl font-semibold mb-2">Nenhuma empresa no ranking ainda</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+              Analise pelo menos 2 empresas diferentes para comparar e ver quem lidera o ranking.
             </p>
+            <div className="max-w-xs mx-auto space-y-3">
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <FileText className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-sm text-muted-foreground">Vá em <span className="font-medium text-foreground">Documentos</span> e faça upload de PDFs</p>
+              </div>
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Zap className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-sm text-muted-foreground">Analise pelo menos <span className="font-medium text-foreground">2 tickers diferentes</span></p>
+              </div>
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Trophy className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-sm text-muted-foreground">Volte aqui para ver o <span className="font-medium text-foreground">ranking automático</span></p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       ) : (

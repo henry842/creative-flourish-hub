@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, Minus, Star } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Star, FileText, Zap } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
@@ -100,12 +100,32 @@ export default function Sentiment() {
         </div>
       ) : analyses.length === 0 ? (
         <Card className="glass">
-          <CardContent className="py-12 text-center">
-            <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Nenhuma análise de sentimento ainda.</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Use o chat para analisar seus documentos e gerar insights.
+          <CardContent className="py-16 text-center">
+            <TrendingUp className="h-16 w-16 mx-auto text-muted-foreground/40 mb-6" />
+            <h3 className="font-display text-xl font-semibold mb-2">Nenhuma análise de sentimento ainda</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+              Análises de sentimento são geradas automaticamente ao analisar seus documentos financeiros.
             </p>
+            <div className="max-w-xs mx-auto space-y-3">
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <FileText className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-sm text-muted-foreground">Faça upload de um PDF em <span className="font-medium text-foreground">Documentos</span></p>
+              </div>
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Zap className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-sm text-muted-foreground">Clique em <span className="font-medium text-foreground">Analisar</span> para gerar o sentimento</p>
+              </div>
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-sm text-muted-foreground">Os resultados aparecem <span className="font-medium text-foreground">automaticamente aqui</span></p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -166,7 +186,6 @@ export default function Sentiment() {
                       </p>
                     )}
 
-                    {/* Score Evolution Chart */}
                     {expandedTicker === ticker && hasHistory && (
                       <div className="mt-4 pt-4 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
                         <p className="text-xs text-muted-foreground mb-2 font-medium">Evolução do Health Score</p>

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle, Zap, Printer, Star, RefreshCw } from "lucide-react";
+import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle, Zap, Printer, Star, RefreshCw, Search, ArrowRight } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { HealthScoreCard } from "@/components/HealthScoreCard";
 import { RedFlagsList } from "@/components/RedFlagsList";
@@ -47,6 +47,16 @@ export default function Documents() {
   const [ticker, setTicker] = useState("");
   const [docType, setDocType] = useState("other");
   const [watchlistTickers, setWatchlistTickers] = useState<Set<string>>(new Set());
+
+  // Progress stepper state
+  const getFlowStep = () => {
+    if (documents.length === 0) return 0;
+    const hasProcessed = documents.some((d) => healthScores[d.id]);
+    const hasExpanded = expandedDoc !== null;
+    if (hasExpanded && hasProcessed) return 3;
+    if (hasProcessed) return 2;
+    return 1;
+  };
 
   const fetchDocs = useCallback(async () => {
     if (!user) return;
@@ -179,11 +189,44 @@ export default function Documents() {
     return `${(bytes / 1048576).toFixed(1)} MB`;
   };
 
+  const flowStep = getFlowStep();
+  const steps = [
+    { label: "Upload", icon: Upload },
+    { label: "Analisar", icon: Zap },
+    { label: "Explorar", icon: Search },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-3xl font-bold">Documentos</h1>
         <p className="text-muted-foreground mt-1">Gerencie seus relatórios financeiros</p>
+      </div>
+
+      {/* Progress Stepper */}
+      <div className="flex items-center justify-center gap-0">
+        {steps.map((step, i) => {
+          const StepIcon = step.icon;
+          const isActive = flowStep > i;
+          const isCurrent = flowStep === i;
+          return (
+            <div key={step.label} className="flex items-center">
+              <div className="flex flex-col items-center gap-1">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                  isActive ? "bg-bullish text-primary-foreground" : isCurrent ? "bg-primary/20 text-primary border-2 border-primary" : "bg-muted text-muted-foreground"
+                }`}>
+                  {isActive ? <CheckCircle className="h-4 w-4" /> : <StepIcon className="h-4 w-4" />}
+                </div>
+                <span className={`text-xs font-medium ${isActive ? "text-bullish" : isCurrent ? "text-primary" : "text-muted-foreground"}`}>
+                  {step.label}
+                </span>
+              </div>
+              {i < steps.length - 1 && (
+                <div className={`w-16 h-0.5 mx-2 mb-5 transition-colors ${flowStep > i + 1 ? "bg-bullish" : flowStep > i ? "bg-primary/40" : "bg-muted"}`} />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <Card className="glass">
@@ -227,9 +270,32 @@ export default function Documents() {
           [1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)
         ) : documents.length === 0 ? (
           <Card className="glass">
-            <CardContent className="py-12 text-center">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Nenhum documento enviado ainda.</p>
+            <CardContent className="py-16 text-center">
+              <FileText className="h-16 w-16 mx-auto text-muted-foreground/40 mb-6" />
+              <h3 className="font-display text-xl font-semibold mb-6">Nenhum documento ainda</h3>
+              <div className="max-w-sm mx-auto space-y-4">
+                <div className="flex items-start gap-3 text-left">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">1</span>
+                  <div>
+                    <p className="font-medium text-sm">Escolha um PDF financeiro</p>
+                    <p className="text-xs text-muted-foreground">10-K, 10-Q, earnings calls ou relatórios</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 text-left">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">2</span>
+                  <div>
+                    <p className="font-medium text-sm">Digite o ticker da empresa</p>
+                    <p className="text-xs text-muted-foreground">Ex: AAPL, PETR4, NVDA</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 text-left">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">3</span>
+                  <div>
+                    <p className="font-medium text-sm">Clique em Analisar</p>
+                    <p className="text-xs text-muted-foreground">A IA gera Health Score, Red Flags e Price Target</p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -251,7 +317,6 @@ export default function Documents() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {/* Watchlist star */}
                       {doc.ticker && (
                         <Button
                           variant="ghost"
@@ -303,7 +368,6 @@ export default function Documents() {
                   </CardContent>
                 </Card>
 
-                {/* Expanded Health Score */}
                 {isExpanded && score && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 ml-4 print-section">
                     <HealthScoreCard score={score} />
