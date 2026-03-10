@@ -14,6 +14,9 @@ interface HealthScore {
   confidence: number;
   summary: string | null;
   ticker: string | null;
+  price_target_low?: number | null;
+  price_target_high?: number | null;
+  price_target_rationale?: string | null;
 }
 
 function scoreColor(score: number) {
@@ -118,6 +121,21 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
             );
           })}
         </div>
+
+        {/* Price Target */}
+        {score.price_target_low && score.price_target_high && score.price_target_low > 0 && score.price_target_high > 0 && (
+          <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">🎯 Price Target</span>
+              <Badge variant="secondary" className="font-mono text-xs">
+                {score.price_target_low} – {score.price_target_high}
+              </Badge>
+            </div>
+            {score.price_target_rationale && (
+              <p className="text-xs text-muted-foreground">{score.price_target_rationale}</p>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

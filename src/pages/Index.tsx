@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, MessageSquare, TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
+import { FileText, MessageSquare, TrendingUp, TrendingDown, Minus, Activity, Star, X } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { toast } from "@/hooks/use-toast";
 
 interface Stats {
   totalDocs: number;
@@ -13,44 +16,74 @@ interface Stats {
   recentSentiments: { date: string; bullish: number; bearish: number; neutral: number }[];
 }
 
+interface WatchlistItem {
+  id: string;
+  ticker: string;
+  lastScore?: number;
+  lastSentiment?: string;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!user) return;
-    const fetchStats = async () => {
-      const [docsRes, convsRes, sentRes] = await Promise.all([
-        supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
-      ]);
+    const [docsRes, convsRes, sentRes, watchRes, scoresRes] = await Promise.all([
+      supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("watchlist").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("health_scores").select("ticker, overall_score, sentiment, created_at").eq("user_id", user.id).not("ticker", "is", null).order("created_at", { ascending: false }),
+    ]);
 
-      const sentiments = sentRes.data || [];
-      const counts = { bullish: 0, bearish: 0, neutral: 0 };
-      sentiments.forEach((s) => {
-        if (s.sentiment in counts) counts[s.sentiment as keyof typeof counts]++;
-      });
+    const sentiments = sentRes.data || [];
+    const counts = { bullish: 0, bearish: 0, neutral: 0 };
+    sentiments.forEach((s) => {
+      if (s.sentiment in counts) counts[s.sentiment as keyof typeof counts]++;
+    });
 
-      // Group by date for chart
-      const byDate: Record<string, { bullish: number; bearish: number; neutral: number }> = {};
-      sentiments.forEach((s) => {
-        const date = new Date(s.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-        if (!byDate[date]) byDate[date] = { bullish: 0, bearish: 0, neutral: 0 };
-        if (s.sentiment in byDate[date]) byDate[date][s.sentiment as keyof typeof counts]++;
-      });
+    const byDate: Record<string, { bullish: number; bearish: number; neutral: number }> = {};
+    sentiments.forEach((s) => {
+      const date = new Date(s.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      if (!byDate[date]) byDate[date] = { bullish: 0, bearish: 0, neutral: 0 };
+      if (s.sentiment in byDate[date]) byDate[date][s.sentiment as keyof typeof counts]++;
+    });
 
-      setStats({
-        totalDocs: docsRes.count || 0,
-        totalConversations: convsRes.count || 0,
-        sentimentCounts: counts,
-        recentSentiments: Object.entries(byDate).map(([date, v]) => ({ date, ...v })).reverse(),
-      });
-      setLoading(false);
-    };
-    fetchStats();
-  }, [user]);
+    const scores = scoresRes.data || [];
+    const latestByTicker: Record<string, { score: number; sentiment: string }> = {};
+    scores.forEach((s) => {
+      if (s.ticker && !latestByTicker[s.ticker]) {
+        latestByTicker[s.ticker] = { score: s.overall_score, sentiment: s.sentiment || "neutral" };
+      }
+    });
+
+    const wl: WatchlistItem[] = (watchRes.data || []).map((w: any) => ({
+      id: w.id,
+      ticker: w.ticker,
+      lastScore: latestByTicker[w.ticker]?.score,
+      lastSentiment: latestByTicker[w.ticker]?.sentiment,
+    }));
+
+    setWatchlist(wl);
+    setStats({
+      totalDocs: docsRes.count || 0,
+      totalConversations: convsRes.count || 0,
+      sentimentCounts: counts,
+      recentSentiments: Object.entries(byDate).map(([date, v]) => ({ date, ...v })).reverse(),
+    });
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, [user]);
+
+  const removeFromWatchlist = async (id: string) => {
+    await supabase.from("watchlist").delete().eq("id", id);
+    setWatchlist((prev) => prev.filter((w) => w.id !== id));
+    toast({ title: "Removido da watchlist" });
+  };
 
   if (loading) {
     return (
@@ -71,6 +104,8 @@ export default function Dashboard() {
   ].filter(d => d.value > 0) : [];
 
   const total = (stats?.sentimentCounts.bullish || 0) + (stats?.sentimentCounts.bearish || 0) + (stats?.sentimentCounts.neutral || 0);
+
+  const scoreColor = (s: number) => s >= 80 ? "text-bullish" : s >= 60 ? "text-neutral" : "text-bearish";
 
   return (
     <div className="space-y-6">
@@ -126,6 +161,41 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Watchlist Widget */}
+      {watchlist.length > 0 && (
+        <Card className="glass">
+          <CardHeader>
+            <CardTitle className="font-display flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" /> Watchlist
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {watchlist.map((w) => (
+                <div key={w.id} className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
+                  <div>
+                    <span className="font-display font-bold">{w.ticker}</span>
+                    {w.lastScore !== undefined && (
+                      <span className={`ml-2 text-sm font-medium ${scoreColor(w.lastScore)}`}>
+                        {w.lastScore}
+                      </span>
+                    )}
+                    {w.lastSentiment && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {w.lastSentiment === "bullish" ? "🟢" : w.lastSentiment === "bearish" ? "🔴" : "🟡"}
+                      </Badge>
+                    )}
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFromWatchlist(w.id)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="glass lg:col-span-2">

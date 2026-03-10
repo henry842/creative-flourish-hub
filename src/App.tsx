@@ -15,6 +15,8 @@ import Documents from "./pages/Documents";
 import Chat from "./pages/Chat";
 import Sentiment from "./pages/Sentiment";
 import Compare from "./pages/Compare";
+import Ranking from "./pages/Ranking";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +52,8 @@ const App = () => (
               <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
               <Route path="/sentiment" element={<ProtectedRoute><Sentiment /></ProtectedRoute>} />
               <Route path="/compare" element={<ProtectedRoute><Compare /></ProtectedRoute>} />
+              <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+              <Route path="/pricing" element={<PublicRoute><Pricing /></PublicRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

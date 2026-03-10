@@ -271,6 +271,29 @@ export default function Chat() {
                 </div>
               </ScrollArea>
 
+              {/* Suggested questions */}
+              {messages.length === 0 && !isStreaming && (
+                <div className="flex flex-wrap gap-2 pb-2">
+                  {[
+                    "Qual o maior risco desse documento?",
+                    "Como estão as margens da empresa?",
+                    "Vale a pena investir?",
+                    "Quais são os red flags?",
+                    "Resuma os principais números",
+                  ].map((q) => (
+                    <Button
+                      key={q}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => { setInput(q); }}
+                    >
+                      {q}
+                    </Button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex gap-2 pt-4 border-t border-border/50">
                 <Input
                   placeholder="Pergunte sobre seus documentos financeiros..."
