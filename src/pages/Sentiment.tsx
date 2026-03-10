@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Star } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Tables } from "@/integrations/supabase/types";
+import { toast } from "@/hooks/use-toast";
 
 type SentimentAnalysis = Tables<"sentiment_analyses">;
 
@@ -20,6 +22,7 @@ export default function Sentiment() {
   const [analyses, setAnalyses] = useState<SentimentAnalysis[]>([]);
   const [scoreHistory, setScoreHistory] = useState<Record<string, ScorePoint[]>>({});
   const [expandedTicker, setExpandedTicker] = useState<string | null>(null);
+  const [watchlistTickers, setWatchlistTickers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
