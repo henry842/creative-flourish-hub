@@ -83,6 +83,9 @@ serve(async (req) => {
                   sentiment: { type: "string", enum: ["bullish", "bearish", "neutral"], description: "Overall sentiment" },
                   confidence: { type: "number", description: "Confidence level 0-1" },
                   summary: { type: "string", description: "Brief analysis summary in Portuguese (2-3 sentences)" },
+                  price_target_low: { type: "integer", description: "Conservative price target in the stock's currency (e.g. USD or BRL). If not applicable, use 0" },
+                  price_target_high: { type: "integer", description: "Optimistic price target in the stock's currency. If not applicable, use 0" },
+                  price_target_rationale: { type: "string", description: "Brief rationale for the price target in Portuguese (1-2 sentences)" },
                   red_flags: {
                     type: "array",
                     items: { type: "string" },
@@ -101,7 +104,7 @@ serve(async (req) => {
                     description: "Key financial events extracted from the document"
                   }
                 },
-                required: ["overall_score", "revenue_growth", "net_margin", "debt_level", "earnings_quality", "regulatory_risk", "sentiment", "confidence", "summary", "red_flags", "timeline_events"],
+                required: ["overall_score", "revenue_growth", "net_margin", "debt_level", "earnings_quality", "regulatory_risk", "sentiment", "confidence", "summary", "price_target_low", "price_target_high", "price_target_rationale", "red_flags", "timeline_events"],
                 additionalProperties: false
               }
             }
