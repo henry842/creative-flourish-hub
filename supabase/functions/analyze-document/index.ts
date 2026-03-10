@@ -154,6 +154,9 @@ serve(async (req) => {
       summary: analysis.summary,
       sentiment: analysis.sentiment,
       confidence: analysis.confidence,
+      price_target_low: analysis.price_target_low || null,
+      price_target_high: analysis.price_target_high || null,
+      price_target_rationale: analysis.price_target_rationale || null,
     });
     if (hsError) console.error("health_scores insert error:", hsError);
 
