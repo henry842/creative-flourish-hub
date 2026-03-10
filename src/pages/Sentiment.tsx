@@ -134,7 +134,20 @@ export default function Sentiment() {
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="font-display text-lg">{ticker}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="font-display text-lg">{ticker}</CardTitle>
+                        {ticker !== "Sem ticker" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => { e.stopPropagation(); toggleWatchlist(ticker); }}
+                            title={watchlistTickers.has(ticker) ? "Remover da watchlist" : "Adicionar à watchlist"}
+                          >
+                            <Star className={`h-4 w-4 ${watchlistTickers.has(ticker) ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} />
+                          </Button>
+                        )}
+                      </div>
                       <div className={`p-2 rounded-full ${cfg.bg}`}>
                         <Icon className={`h-4 w-4 ${cfg.color}`} />
                       </div>
