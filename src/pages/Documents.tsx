@@ -16,6 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle, Zap, Printer, Star, RefreshCw, Search, Pencil } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { HealthScoreCard } from "@/components/HealthScoreCard";
@@ -59,6 +60,7 @@ export default function Documents() {
   const [editingDoc, setEditingDoc] = useState<Document | null>(null);
   const [editName, setEditName] = useState("");
   const [editTicker, setEditTicker] = useState("");
+  const [editExtractedText, setEditExtractedText] = useState("");
   const [saving, setSaving] = useState(false);
 
   const getFlowStep = () => {
@@ -187,14 +189,19 @@ export default function Documents() {
     setEditingDoc(doc);
     setEditName(doc.name);
     setEditTicker(doc.ticker || "");
+    setEditExtractedText(doc.extracted_text || "");
   };
 
   const handleSaveEdit = async () => {
     if (!editingDoc || !editName.trim()) return;
     setSaving(true);
+    const updateData: any = { name: editName.trim(), ticker: editTicker.trim().toUpperCase() || null };
+    if (editExtractedText.trim()) {
+      updateData.extracted_text = editExtractedText.trim();
+    }
     const { error } = await supabase
       .from("documents")
-      .update({ name: editName.trim(), ticker: editTicker.trim().toUpperCase() || null })
+      .update(updateData)
       .eq("id", editingDoc.id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -484,6 +491,18 @@ export default function Documents() {
             <div className="space-y-2">
               <Label>Ticker</Label>
               <Input value={editTicker} onChange={(e) => setEditTicker(e.target.value.toUpperCase())} placeholder="AAPL, PETR4..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Texto do documento (cole aqui se a extração automática falhou)</Label>
+              <Textarea
+                value={editExtractedText}
+                onChange={(e) => setEditExtractedText(e.target.value)}
+                placeholder="Cole aqui o conteúdo do PDF (texto copiado dos slides, relatório, etc.)..."
+                className="min-h-[200px] text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Para PDFs baseados em imagens/slides: copie o texto do PDF e cole aqui. Este texto será usado pela IA na análise.
+              </p>
             </div>
           </div>
           <DialogFooter>
