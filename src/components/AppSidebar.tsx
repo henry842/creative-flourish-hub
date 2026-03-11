@@ -3,6 +3,7 @@ import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { GroqCreditCounter } from "@/components/GroqCreditCounter";
 import {
   Sidebar,
   SidebarContent,
