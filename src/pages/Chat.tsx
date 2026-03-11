@@ -96,7 +96,7 @@ export default function Chat() {
       .from("documents")
       .select("id, name, ticker, status, extracted_text")
       .eq("user_id", user.id)
-      .eq("status", "analyzed")
+      .in("status", ["analyzed", "processed"])
       .order("created_at", { ascending: false });
     setDocuments(data || []);
   }, [user]);
