@@ -305,27 +305,33 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
       });
     }
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit Groq excedido. Tente novamente em alguns instantes." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("Groq API error:", response.status, t);
-      throw new Error("Groq API error");
-    }
-
-    const aiResult = await response.json();
-
     // Track usage
     await incrementUsage();
 
+    // Extract analysis - try tool_calls first, then fallback to content parsing
+    let analysis: any;
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in AI response");
+    if (toolCall?.function?.arguments) {
+      try {
+        analysis = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        console.error("Tool call parse failed:", e);
+      }
+    }
 
-    const analysis = JSON.parse(toolCall.function.arguments);
+    if (!analysis) {
+      const content = aiResult.choices?.[0]?.message?.content || "";
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          analysis = JSON.parse(jsonMatch[0]);
+        } catch (e) {
+          console.error("Content JSON parse failed:", e);
+        }
+      }
+    }
+
+    if (!analysis) throw new Error("Could not extract structured data from AI response");
 
     // Save health score
     const { error: hsError } = await supabase.from("health_scores").insert({
