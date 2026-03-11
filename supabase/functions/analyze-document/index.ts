@@ -301,6 +301,7 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
     });
 
     let aiResult: any = null;
+    let lastError: string = "";
     for (const model of models) {
       console.log(`Trying Groq model: ${model}`);
       const res = await fetch(GROQ_API_URL, {
