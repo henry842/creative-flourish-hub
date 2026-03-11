@@ -250,8 +250,7 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
       tool_choice: { type: "function", function: { name: "submit_financial_analysis" } }
     });
 
-    let response: Response | null = null;
-    let lastError = "";
+    let aiResult: any = null;
     for (const model of models) {
       console.log(`Trying Groq model: ${model}`);
       const res = await fetch(GROQ_API_URL, {
@@ -263,11 +262,34 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
         body: buildBody(model),
       });
       if (res.ok) {
-        response = res;
+        aiResult = await res.json();
         break;
       }
       lastError = await res.text();
       console.error(`Groq model ${model} failed (${res.status}):`, lastError);
+      
+      // For tool_use_failed errors, try to extract JSON from the failed_generation
+      if (res.status === 400 && lastError.includes("tool_use_failed")) {
+        console.log("Attempting to extract JSON from failed_generation...");
+        try {
+          const errorObj = JSON.parse(lastError);
+          const failedGen = errorObj?.error?.failed_generation || "";
+          const jsonMatch = failedGen.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.overall_score !== undefined) {
+              console.log("Successfully extracted analysis from failed_generation");
+              aiResult = { choices: [{ message: { tool_calls: [{ function: { arguments: JSON.stringify(parsed) } }] } }] };
+              break;
+            }
+          }
+        } catch (extractErr) {
+          console.error("Failed to extract from failed_generation:", extractErr);
+        }
+        // Continue to next model instead of returning error
+        continue;
+      }
+      
       if (res.status !== 429 && res.status >= 400 && res.status < 500) {
         return new Response(JSON.stringify({ error: lastError }), {
           status: res.status,
@@ -276,7 +298,7 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
       }
     }
 
-    if (!response) {
+    if (!aiResult) {
       return new Response(JSON.stringify({ error: "Todos os modelos Groq falharam. Tente novamente em alguns minutos." }), {
         status: 503,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
