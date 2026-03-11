@@ -48,6 +48,28 @@ serve(async (req) => {
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
 
+    // Track usage helper
+    const incrementUsage = async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const { data: existing } = await supabase
+        .from("groq_usage")
+        .select("id, request_count")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("groq_usage")
+          .update({ request_count: existing.request_count + 1, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+      } else {
+        await supabase
+          .from("groq_usage")
+          .insert({ user_id: user.id, date: today, request_count: 1 });
+      }
+    };
+
     // Groq models to try (best first, then fallbacks)
     const models = [
       "llama-3.3-70b-versatile",
