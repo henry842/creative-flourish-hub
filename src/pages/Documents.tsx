@@ -16,6 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle, Zap, Printer, Star, RefreshCw, Search, Pencil } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { HealthScoreCard } from "@/components/HealthScoreCard";
