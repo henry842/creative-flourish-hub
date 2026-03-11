@@ -492,6 +492,18 @@ export default function Documents() {
               <Label>Ticker</Label>
               <Input value={editTicker} onChange={(e) => setEditTicker(e.target.value.toUpperCase())} placeholder="AAPL, PETR4..." />
             </div>
+            <div className="space-y-2">
+              <Label>Texto do documento (cole aqui se a extração automática falhou)</Label>
+              <Textarea
+                value={editExtractedText}
+                onChange={(e) => setEditExtractedText(e.target.value)}
+                placeholder="Cole aqui o conteúdo do PDF (texto copiado dos slides, relatório, etc.)..."
+                className="min-h-[200px] text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Para PDFs baseados em imagens/slides: copie o texto do PDF e cole aqui. Este texto será usado pela IA na análise.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingDoc(null)}>Cancelar</Button>

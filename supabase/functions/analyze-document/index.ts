@@ -146,9 +146,59 @@ serve(async (req) => {
       console.log(`Extracted text length: ${text.length} chars`);
 
       if (text.length < 50) {
-        // Fallback: the PDF might be image-based or have complex encoding
-        text = `[Texto extraído limitado do PDF "${docRecord.name}". O documento pode conter imagens ou formatação complexa que não pôde ser totalmente extraída.]`;
-        console.warn("Extracted text too short, PDF may be image-based");
+        // Fallback: use Gemini vision to read image-based PDFs
+        console.warn("Extracted text too short, attempting Gemini vision OCR...");
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        if (LOVABLE_API_KEY) {
+          try {
+            const base64Pdf = btoa(String.fromCharCode(...pdfBytes));
+            const visionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-flash",
+                messages: [
+                  {
+                    role: "user",
+                    content: [
+                      {
+                        type: "text",
+                        text: "Extraia TODO o texto visível deste documento PDF. Inclua números, tabelas, títulos, rodapés - tudo. Retorne apenas o texto extraído, sem comentários adicionais."
+                      },
+                      {
+                        type: "image_url",
+                        image_url: {
+                          url: `data:application/pdf;base64,${base64Pdf}`
+                        }
+                      }
+                    ]
+                  }
+                ],
+              }),
+            });
+
+            if (visionResponse.ok) {
+              const visionResult = await visionResponse.json();
+              const extractedByVision = visionResult.choices?.[0]?.message?.content || "";
+              if (extractedByVision.length > 50) {
+                text = cleanTextForLLM(extractedByVision);
+                console.log(`Gemini vision extracted ${text.length} chars`);
+              }
+            } else {
+              console.error("Gemini vision failed:", visionResponse.status, await visionResponse.text());
+            }
+          } catch (visionErr) {
+            console.error("Gemini vision error:", visionErr);
+          }
+        }
+
+        if (text.length < 50) {
+          text = `[Texto extraído limitado do PDF "${docRecord.name}". O documento pode conter imagens ou formatação complexa. Use o botão Editar para colar o texto manualmente.]`;
+          console.warn("All extraction methods failed for this PDF");
+        }
       }
 
       // Save extracted text to database
