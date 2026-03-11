@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,27 @@ Diretrizes:
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+async function incrementUsage(supabase: any, userId: string) {
+  const today = new Date().toISOString().split("T")[0];
+  const { data } = await supabase
+    .from("groq_usage")
+    .select("id, request_count")
+    .eq("user_id", userId)
+    .eq("date", today)
+    .maybeSingle();
+
+  if (data) {
+    await supabase
+      .from("groq_usage")
+      .update({ request_count: data.request_count + 1, updated_at: new Date().toISOString() })
+      .eq("id", data.id);
+  } else {
+    await supabase
+      .from("groq_usage")
+      .insert({ user_id: userId, date: today, request_count: 1 });
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -32,6 +54,20 @@ serve(async (req) => {
     const { messages } = await req.json();
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
+
+    // Get user for usage tracking
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const authHeader = req.headers.get("Authorization");
+    let userId: string | null = null;
+    if (authHeader) {
+      const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user } } = await anonClient.auth.getUser(token);
+      userId = user?.id ?? null;
+    }
 
     // Groq models to try in order
     const models = [
@@ -77,6 +113,11 @@ serve(async (req) => {
         status: 503,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Track usage
+    if (userId) {
+      await incrementUsage(supabase, userId);
     }
 
     return new Response(response.body, {
