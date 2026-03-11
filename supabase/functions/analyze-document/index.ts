@@ -8,6 +8,14 @@ const corsHeaders = {
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+function cleanTextForLLM(text: string): string {
+  // Remove control characters except newline/tab/carriage return
+  return text
+    .replace(/[^\x20-\x7E\xA0-\xFF\n\r\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function extractTextFromPdf(pdfBytes: Uint8Array): Promise<string> {
   // Simple PDF text extraction - handles most text-based PDFs
   const decoder = new TextDecoder("latin1");
@@ -57,7 +65,8 @@ async function extractTextFromPdf(pdfBytes: Uint8Array): Promise<string> {
     }
   }
   
-  return deduped.join(" ").replace(/\s+/g, " ").trim();
+  const result = deduped.join(" ").replace(/\s+/g, " ").trim();
+  return cleanTextForLLM(result);
 }
 
 serve(async (req) => {
