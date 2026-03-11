@@ -60,6 +60,7 @@ export default function Documents() {
   const [editingDoc, setEditingDoc] = useState<Document | null>(null);
   const [editName, setEditName] = useState("");
   const [editTicker, setEditTicker] = useState("");
+  const [editExtractedText, setEditExtractedText] = useState("");
   const [saving, setSaving] = useState(false);
 
   const getFlowStep = () => {
