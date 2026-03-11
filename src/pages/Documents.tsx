@@ -150,8 +150,6 @@ export default function Documents() {
   const handleAnalyze = async (doc: Document) => {
     setAnalyzing(doc.id);
     try {
-      const textContent = doc.extracted_text || `Documento financeiro: ${doc.name}. Ticker: ${doc.ticker || "N/A"}. Tipo: ${doc.doc_type}. Este é um relatório financeiro que precisa ser analisado. Por favor, gere scores simulados baseados no tipo de documento e ticker informados.`;
-
       const { data: session } = await supabase.auth.getSession();
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-document`, {
         method: "POST",
@@ -161,7 +159,6 @@ export default function Documents() {
         },
         body: JSON.stringify({
           document_id: doc.id,
-          text: textContent,
           ticker: doc.ticker,
         }),
       });
