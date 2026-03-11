@@ -249,7 +249,7 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
         },
         {
           role: "user",
-          content: `Analise este documento financeiro${ticker ? ` da empresa ${ticker}` : ""}:\n\n${text.slice(0, 15000)}`
+          content: `Analise este documento financeiro${ticker ? ` da empresa ${ticker}` : ""}:\n\n${text.slice(0, 8000)}`
         }
       ],
       tools: [
