@@ -182,6 +182,10 @@ serve(async (req) => {
     }
 
     const aiResult = await response.json();
+
+    // Track usage
+    await incrementUsage();
+
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("No tool call in AI response");
 
