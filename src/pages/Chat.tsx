@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Send, Plus, MessageSquare, Bot, User, BookOpen, Trash2, Check, X } from "lucide-react";
+import { Send, Plus, MessageSquare, Bot, User, BookOpen, Trash2, Check, X, FileText, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
@@ -16,6 +16,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 interface Message {
   id?: string;
@@ -27,6 +31,14 @@ interface Conversation {
   id: string;
   title: string;
   created_at: string;
+}
+
+interface Document {
+  id: string;
+  name: string;
+  ticker: string | null;
+  status: string;
+  extracted_text: string | null;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -54,12 +66,18 @@ export default function Chat() {
   const [loadingConvs, setLoadingConvs] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Document context
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+
   // Rename state
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
   // Delete state
   const [deletingConv, setDeletingConv] = useState<Conversation | null>(null);
+
+  const selectedDoc = documents.find((d) => d.id === selectedDocId) || null;
 
   const fetchConversations = useCallback(async () => {
     if (!user) return;
@@ -72,9 +90,21 @@ export default function Chat() {
     setLoadingConvs(false);
   }, [user]);
 
+  const fetchDocuments = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("documents")
+      .select("id, name, ticker, status, extracted_text")
+      .eq("user_id", user.id)
+      .eq("status", "analyzed")
+      .order("created_at", { ascending: false });
+    setDocuments(data || []);
+  }, [user]);
+
   useEffect(() => {
     fetchConversations();
-  }, [fetchConversations]);
+    fetchDocuments();
+  }, [fetchConversations, fetchDocuments]);
 
   const loadMessages = useCallback(async (convId: string) => {
     setActiveConv(convId);
@@ -118,7 +148,6 @@ export default function Chat() {
   };
 
   const handleDeleteConv = async (conv: Conversation) => {
-    // Delete messages first, then conversation
     await supabase.from("messages").delete().eq("conversation_id", conv.id);
     const { error } = await supabase.from("conversations").delete().eq("id", conv.id);
     if (error) {
@@ -162,13 +191,20 @@ export default function Chat() {
     let assistantContent = "";
     try {
       const allMessages = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
+      
+      // Build document context to send to the edge function
+      let documentContext: string | undefined;
+      if (selectedDoc?.extracted_text) {
+        documentContext = `[DOCUMENTO SELECIONADO: "${selectedDoc.name}"${selectedDoc.ticker ? ` (Ticker: ${selectedDoc.ticker})` : ""}]\n\n${selectedDoc.extracted_text.slice(0, 12000)}`;
+      }
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: allMessages }),
+        body: JSON.stringify({ messages: allMessages, documentContext }),
       });
 
       if (resp.status === 429) {
@@ -402,6 +438,42 @@ export default function Chat() {
             </div>
           ) : (
             <>
+              {/* Document selector bar */}
+              <div className="flex items-center gap-2 pb-3 mb-1 border-b border-border/50">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Select
+                  value={selectedDocId || "none"}
+                  onValueChange={(v) => setSelectedDocId(v === "none" ? null : v)}
+                >
+                  <SelectTrigger className="h-8 text-xs flex-1 max-w-sm">
+                    <SelectValue placeholder="Nenhum documento selecionado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">Sem documento (conversa livre)</span>
+                    </SelectItem>
+                    {documents.map((doc) => (
+                      <SelectItem key={doc.id} value={doc.id}>
+                        <span className="flex items-center gap-2">
+                          {doc.name}
+                          {doc.ticker && (
+                            <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                              {doc.ticker}
+                            </span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedDoc && (
+                  <Badge variant="outline" className="text-[10px] shrink-0 gap-1 border-primary/30 text-primary">
+                    <FileText className="h-3 w-3" />
+                    Contexto ativo
+                  </Badge>
+                )}
+              </div>
+
               <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
                 <div className="space-y-4 pb-4">
                   {messages.map((msg, i) => (
@@ -472,7 +544,7 @@ export default function Chat() {
 
               <div className="flex gap-2 pt-4 border-t border-border/50">
                 <Input
-                  placeholder="Pergunte sobre seus documentos financeiros..."
+                  placeholder={selectedDoc ? `Pergunte sobre "${selectedDoc.name}"...` : "Pergunte sobre seus documentos financeiros..."}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
