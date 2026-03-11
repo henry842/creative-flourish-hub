@@ -6,14 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, TrendingDown, Minus, Star, FileText, Zap, BarChart3, Activity, Target } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { TrendingUp, TrendingDown, Minus, Star, FileText, Zap, BarChart3, Activity, Target, Trash2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Tables } from "@/integrations/supabase/types";
 import { toast } from "@/hooks/use-toast";
@@ -36,41 +35,27 @@ export default function Sentiment() {
   const [loading, setLoading] = useState(true);
   const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>("all");
 
-  useEffect(() => {
+  const fetchData = () => {
     if (!user) return;
     Promise.all([
-      supabase
-        .from("sentiment_analyses")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("health_scores")
-        .select("ticker, overall_score, created_at")
-        .eq("user_id", user.id)
-        .not("ticker", "is", null)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("watchlist")
-        .select("ticker")
-        .eq("user_id", user.id),
+      supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("health_scores").select("ticker, overall_score, created_at").eq("user_id", user.id).not("ticker", "is", null).order("created_at", { ascending: true }),
+      supabase.from("watchlist").select("ticker").eq("user_id", user.id),
     ]).then(([sentRes, scoresRes, watchRes]) => {
       setAnalyses(sentRes.data || []);
-
       const history: Record<string, ScorePoint[]> = {};
       (scoresRes.data || []).forEach((s) => {
         const t = s.ticker!;
         if (!history[t]) history[t] = [];
-        history[t].push({
-          date: new Date(s.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-          score: s.overall_score,
-        });
+        history[t].push({ date: new Date(s.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), score: s.overall_score });
       });
       setScoreHistory(history);
       setWatchlistTickers(new Set((watchRes.data || []).map((w: any) => w.ticker)));
       setLoading(false);
     });
-  }, [user]);
+  };
+
+  useEffect(() => { fetchData(); }, [user]);
 
   const toggleWatchlist = async (tickerName: string) => {
     if (!user || !tickerName) return;
@@ -82,6 +67,16 @@ export default function Sentiment() {
       await supabase.from("watchlist").insert({ user_id: user.id, ticker: tickerName });
       setWatchlistTickers((prev) => new Set(prev).add(tickerName));
       toast({ title: `${tickerName} adicionado à watchlist ⭐` });
+    }
+  };
+
+  const handleDeleteAnalysis = async (id: string) => {
+    const { error } = await supabase.from("sentiment_analyses").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      setAnalyses((prev) => prev.filter((a) => a.id !== id));
+      toast({ title: "Análise removida ✅" });
     }
   };
 
@@ -98,7 +93,6 @@ export default function Sentiment() {
     byTicker[key].push(a);
   });
 
-  // Summary calculations
   const uniqueTickers = Object.keys(byTicker).filter((t) => t !== "sem_ticker");
   const allSentiments = analyses.map((a) => a.sentiment);
   const sentimentCounts = { bullish: 0, bearish: 0, neutral: 0 };
@@ -110,10 +104,7 @@ export default function Sentiment() {
     ? analyses.reduce((sum, a) => sum + (a.confidence || 0), 0) / analyses.length
     : 0;
 
-  // Filtered analyses for table
-  const filteredAnalyses = sentimentFilter === "all"
-    ? analyses
-    : analyses.filter((a) => a.sentiment === sentimentFilter);
+  const filteredAnalyses = sentimentFilter === "all" ? analyses : analyses.filter((a) => a.sentiment === sentimentFilter);
 
   const filterButtons: { key: SentimentFilter; label: string }[] = [
     { key: "all", label: "Todos" },
@@ -218,10 +209,7 @@ export default function Sentiment() {
               const isUnidentified = ticker === "sem_ticker";
               const displayName = isUnidentified ? "Sem ticker identificado" : ticker;
               const dominant = items.reduce(
-                (acc, curr) => {
-                  acc[curr.sentiment as keyof typeof acc]++;
-                  return acc;
-                },
+                (acc, curr) => { acc[curr.sentiment as keyof typeof acc]++; return acc; },
                 { bullish: 0, bearish: 0, neutral: 0 }
               );
               const topSentiment = Object.entries(dominant).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof sentimentConfig;
@@ -235,9 +223,7 @@ export default function Sentiment() {
                 <Card
                   key={ticker}
                   className={`hover:shadow-lg transition-all cursor-pointer ${
-                    isUnidentified
-                      ? "border-dashed border-muted-foreground/30 opacity-70"
-                      : "glass border-l-4"
+                    isUnidentified ? "border-dashed border-muted-foreground/30 opacity-70" : "glass border-l-4"
                   }`}
                   style={!isUnidentified ? { borderLeftColor: `hsl(var(--${topSentiment}))` } : undefined}
                   onClick={() => setExpandedTicker(expandedTicker === ticker ? null : ticker)}
@@ -247,10 +233,7 @@ export default function Sentiment() {
                       <div className="flex items-center gap-2">
                         <CardTitle className="font-display text-lg">{displayName}</CardTitle>
                         {!isUnidentified && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
+                          <Button variant="ghost" size="icon" className="h-6 w-6"
                             onClick={(e) => { e.stopPropagation(); toggleWatchlist(ticker); }}
                             title={watchlistTickers.has(ticker) ? "Remover da watchlist" : "Adicionar à watchlist"}
                           >
@@ -261,7 +244,6 @@ export default function Sentiment() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {/* Large sentiment score */}
                     <div className="flex items-center justify-center gap-3 py-3">
                       <div className={`p-3 rounded-full ${cfg.bg}`}>
                         <Icon className={`h-8 w-8 ${cfg.color}`} />
@@ -271,28 +253,22 @@ export default function Sentiment() {
                         <p className="text-xs text-muted-foreground">{cfg.label}</p>
                       </div>
                     </div>
-
                     <div className="flex gap-2 flex-wrap">
                       <Badge className="bg-bullish/10 text-bullish border-0">{dominant.bullish} bullish</Badge>
                       <Badge className="bg-bearish/10 text-bearish border-0">{dominant.bearish} bearish</Badge>
                       <Badge className="bg-neutral/10 text-neutral border-0">{dominant.neutral} neutro</Badge>
                     </div>
-
                     <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/50">
                       <span>{items.length} análise{items.length > 1 ? "s" : ""}</span>
                       {lastAnalysis && (
-                        <span>
-                          {new Date(lastAnalysis).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                        </span>
+                        <span>{new Date(lastAnalysis).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}</span>
                       )}
                     </div>
-
                     {hasHistory && (
                       <p className="text-xs text-primary">
                         {expandedTicker === ticker ? "▲ Fechar gráfico" : "▼ Ver evolução do score"}
                       </p>
                     )}
-
                     {expandedTicker === ticker && hasHistory && (
                       <div className="pt-3 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
                         <p className="text-xs text-muted-foreground mb-2 font-medium">Evolução do Health Score</p>
@@ -301,21 +277,8 @@ export default function Sentiment() {
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                             <XAxis dataKey="date" fontSize={10} stroke="hsl(var(--muted-foreground))" />
                             <YAxis domain={[0, 100]} fontSize={10} stroke="hsl(var(--muted-foreground))" />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: "hsl(var(--card))",
-                                border: "1px solid hsl(var(--border))",
-                                borderRadius: "var(--radius)",
-                                fontSize: 12,
-                              }}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="score"
-                              stroke="hsl(var(--primary))"
-                              strokeWidth={2}
-                              dot={{ fill: "hsl(var(--primary))", r: 3 }}
-                            />
+                            <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)", fontSize: 12 }} />
+                            <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: "hsl(var(--primary))", r: 3 }} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -332,13 +295,7 @@ export default function Sentiment() {
               <h2 className="font-display text-xl font-semibold">Histórico</h2>
               <div className="flex gap-1">
                 {filterButtons.map((f) => (
-                  <Button
-                    key={f.key}
-                    variant={sentimentFilter === f.key ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSentimentFilter(f.key)}
-                    className="text-xs"
-                  >
+                  <Button key={f.key} variant={sentimentFilter === f.key ? "default" : "outline"} size="sm" onClick={() => setSentimentFilter(f.key)} className="text-xs">
                     {f.label}
                   </Button>
                 ))}
@@ -354,12 +311,13 @@ export default function Sentiment() {
                     <TableHead>Confiança</TableHead>
                     <TableHead className="hidden md:table-cell">Resumo</TableHead>
                     <TableHead>Data</TableHead>
+                    <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAnalyses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Nenhuma análise com esse filtro
                       </TableCell>
                     </TableRow>
@@ -382,6 +340,29 @@ export default function Sentiment() {
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                             {new Date(a.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                          </TableCell>
+                          <TableCell>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Deletar análise?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta análise de sentimento será removida permanentemente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteAnalysis(a.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Deletar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </TableCell>
                         </TableRow>
                       );

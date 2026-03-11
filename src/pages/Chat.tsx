@@ -7,11 +7,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Send, Plus, MessageSquare, Bot, User, BookOpen } from "lucide-react";
+import { Send, Plus, MessageSquare, Bot, User, BookOpen, Trash2, Check, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Message {
   id?: string;
@@ -49,6 +53,13 @@ export default function Chat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Rename state
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Delete state
+  const [deletingConv, setDeletingConv] = useState<Conversation | null>(null);
 
   const fetchConversations = useCallback(async () => {
     if (!user) return;
@@ -89,6 +100,38 @@ export default function Chat() {
     setConversations((prev) => [data, ...prev]);
     setActiveConv(data.id);
     setMessages([]);
+  };
+
+  const handleRenameConv = async (convId: string) => {
+    if (!renameValue.trim()) {
+      setRenamingId(null);
+      return;
+    }
+    const { error } = await supabase.from("conversations").update({ title: renameValue.trim() }).eq("id", convId);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title: renameValue.trim() } : c)));
+      toast({ title: "Conversa renomeada ✅" });
+    }
+    setRenamingId(null);
+  };
+
+  const handleDeleteConv = async (conv: Conversation) => {
+    // Delete messages first, then conversation
+    await supabase.from("messages").delete().eq("conversation_id", conv.id);
+    const { error } = await supabase.from("conversations").delete().eq("id", conv.id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      setConversations((prev) => prev.filter((c) => c.id !== conv.id));
+      if (activeConv === conv.id) {
+        setActiveConv(null);
+        setMessages([]);
+      }
+      toast({ title: "Conversa removida" });
+    }
+    setDeletingConv(null);
   };
 
   useEffect(() => {
@@ -226,21 +269,76 @@ export default function Chat() {
               [1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)
             ) : (
               conversations.map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => loadMessages(conv.id)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm truncate transition-colors ${
-                    activeConv === conv.id ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"
-                  }`}
-                >
-                  <MessageSquare className="h-3 w-3 inline mr-2" />
-                  {conv.title}
-                </button>
+                <div key={conv.id} className="group relative">
+                  {renamingId === conv.id ? (
+                    <div className="flex items-center gap-1 px-1">
+                      <Input
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleRenameConv(conv.id);
+                          if (e.key === "Escape") setRenamingId(null);
+                        }}
+                        className="h-8 text-sm"
+                        autoFocus
+                      />
+                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRenameConv(conv.id)}>
+                        <Check className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setRenamingId(null)}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => loadMessages(conv.id)}
+                      onDoubleClick={() => { setRenamingId(conv.id); setRenameValue(conv.title); }}
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm truncate transition-colors pr-14 ${
+                        activeConv === conv.id ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"
+                      }`}
+                      title="Duplo clique para renomear"
+                    >
+                      <MessageSquare className="h-3 w-3 inline mr-2" />
+                      {conv.title}
+                    </button>
+                  )}
+                  {renamingId !== conv.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                      onClick={(e) => { e.stopPropagation(); setDeletingConv(conv); }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               ))
             )}
           </div>
         </ScrollArea>
       </div>
+
+      {/* Delete conversation dialog */}
+      <AlertDialog open={!!deletingConv} onOpenChange={(open) => !open && setDeletingConv(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar conversa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A conversa "{deletingConv?.title}" e todas as mensagens serão removidas permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingConv && handleDeleteConv(deletingConv)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Deletar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Chat area */}
       <Card className="flex-1 glass flex flex-col">
@@ -254,7 +352,6 @@ export default function Chat() {
                   Faça perguntas sobre seus documentos financeiros, analise relatórios e obtenha insights de mercado.
                 </p>
 
-                {/* Example conversation */}
                 <div className="text-left space-y-3 rounded-xl bg-muted/30 p-4 border border-border/50">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Exemplo de conversa</p>
                   <div className="flex gap-2 justify-end">

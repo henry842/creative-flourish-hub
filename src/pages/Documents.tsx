@@ -9,7 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle, Zap, Printer, Star, RefreshCw, Search, ArrowRight } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Upload, FileText, Trash2, Clock, CheckCircle, AlertCircle, Zap, Printer, Star, RefreshCw, Search, Pencil } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { HealthScoreCard } from "@/components/HealthScoreCard";
 import { RedFlagsList } from "@/components/RedFlagsList";
@@ -48,7 +55,12 @@ export default function Documents() {
   const [docType, setDocType] = useState("other");
   const [watchlistTickers, setWatchlistTickers] = useState<Set<string>>(new Set());
 
-  // Progress stepper state
+  // Edit doc modal state
+  const [editingDoc, setEditingDoc] = useState<Document | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editTicker, setEditTicker] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const getFlowStep = () => {
     if (documents.length === 0) return 0;
     const hasProcessed = documents.some((d) => healthScores[d.id]);
@@ -172,6 +184,39 @@ export default function Documents() {
     await supabase.from("documents").delete().eq("id", doc.id);
     toast({ title: "Documento removido" });
     fetchDocs();
+  };
+
+  const handleEditDoc = (doc: Document) => {
+    setEditingDoc(doc);
+    setEditName(doc.name);
+    setEditTicker(doc.ticker || "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingDoc || !editName.trim()) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("documents")
+      .update({ name: editName.trim(), ticker: editTicker.trim().toUpperCase() || null })
+      .eq("id", editingDoc.id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Documento atualizado ✅" });
+      setEditingDoc(null);
+      fetchDocs();
+    }
+    setSaving(false);
+  };
+
+  const handleDeleteHealthScore = async (docId: string) => {
+    const { error } = await supabase.from("health_scores").delete().eq("document_id", docId);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Análise removida", description: "Você pode re-analisar este documento." });
+      fetchDocs();
+    }
   };
 
   const statusIcon = (status: string) => {
@@ -361,20 +406,64 @@ export default function Documents() {
                           </Button>
                         </>
                       )}
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(doc)} className="hover:text-destructive print-hide">
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" onClick={() => handleEditDoc(doc)} className="print-hide" title="Editar documento">
+                        <Pencil className="h-4 w-4" />
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="hover:text-destructive print-hide">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Deletar documento?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação é irreversível. O documento "{doc.name}" e sua análise serão removidos permanentemente.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(doc)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Deletar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </CardContent>
                 </Card>
 
                 {isExpanded && score && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 ml-4 print-section">
-                    <HealthScoreCard score={score} />
-                    <div className="space-y-4">
-                      <RedFlagsList flags={score.red_flags} />
-                      <EventTimeline events={score.timeline_events} />
+                  <div className="ml-4 print-section space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <HealthScoreCard score={score} />
+                      <div className="space-y-4">
+                        <RedFlagsList flags={score.red_flags} />
+                        <EventTimeline events={score.timeline_events} />
+                      </div>
                     </div>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10">
+                          <Trash2 className="h-3 w-3 mr-1" /> Deletar análise (permite re-análise limpa)
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Deletar análise?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            O Health Score deste documento será removido. Você poderá re-analisar do zero.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteHealthScore(doc.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Deletar análise
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 )}
               </div>
@@ -382,6 +471,32 @@ export default function Documents() {
           })
         )}
       </div>
+
+      {/* Edit document modal */}
+      <Dialog open={!!editingDoc} onOpenChange={(open) => !open && setEditingDoc(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar documento</DialogTitle>
+            <DialogDescription>Altere o nome e o ticker do documento.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Nome</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Ticker</Label>
+              <Input value={editTicker} onChange={(e) => setEditTicker(e.target.value.toUpperCase())} placeholder="AAPL, PETR4..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingDoc(null)}>Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={saving || !editName.trim()}>
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
