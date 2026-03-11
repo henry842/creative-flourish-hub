@@ -4,8 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, MessageSquare, TrendingUp, TrendingDown, Minus, Activity, Star, X } from "lucide-react";
+import { FileText, MessageSquare, TrendingUp, TrendingDown, Minus, Activity, Star, X, Plus } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "@/hooks/use-toast";
 
@@ -28,6 +29,8 @@ export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newTicker, setNewTicker] = useState("");
+  const [addingTicker, setAddingTicker] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -83,6 +86,29 @@ export default function Dashboard() {
     await supabase.from("watchlist").delete().eq("id", id);
     setWatchlist((prev) => prev.filter((w) => w.id !== id));
     toast({ title: "Removido da watchlist" });
+  };
+
+  const addToWatchlist = async () => {
+    if (!user || !newTicker.trim()) return;
+    const tickerUpper = newTicker.trim().toUpperCase();
+    if (watchlist.some((w) => w.ticker === tickerUpper)) {
+      toast({ title: "Ticker já existe na watchlist", variant: "destructive" });
+      return;
+    }
+    setAddingTicker(true);
+    const { data, error } = await supabase
+      .from("watchlist")
+      .insert({ user_id: user.id, ticker: tickerUpper })
+      .select()
+      .single();
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      setWatchlist((prev) => [{ id: data.id, ticker: data.ticker }, ...prev]);
+      setNewTicker("");
+      toast({ title: `${tickerUpper} adicionado à watchlist ⭐` });
+    }
+    setAddingTicker(false);
   };
 
   if (loading) {
@@ -163,14 +189,28 @@ export default function Dashboard() {
       </div>
 
       {/* Watchlist Widget */}
-      {watchlist.length > 0 && (
-        <Card className="glass">
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-500" /> Watchlist
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      <Card className="glass">
+        <CardHeader>
+          <CardTitle className="font-display flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-500" /> Watchlist
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add ticker form */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Digite um ticker (ex: AAPL, PETR4)..."
+              value={newTicker}
+              onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === "Enter" && addToWatchlist()}
+              className="max-w-xs"
+            />
+            <Button onClick={addToWatchlist} disabled={addingTicker || !newTicker.trim()} size="sm" className="gap-1">
+              <Plus className="h-3 w-3" /> Adicionar
+            </Button>
+          </div>
+
+          {watchlist.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {watchlist.map((w) => (
                 <div key={w.id} className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
@@ -193,9 +233,11 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhum ticker na watchlist. Adicione acima!</p>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="glass lg:col-span-2">

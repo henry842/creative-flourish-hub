@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, MessageSquare, TrendingUp, Swords, Trophy, LogOut, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, FileText, MessageSquare, TrendingUp, Swords, Trophy, LogOut, Sun, Moon, UserCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +24,7 @@ const navItems = [
   { title: "Sentimento", url: "/sentiment", icon: TrendingUp },
   { title: "Comparar", url: "/compare", icon: Swords },
   { title: "Ranking", url: "/ranking", icon: Trophy },
+  { title: "Perfil", url: "/profile", icon: UserCircle },
 ];
 
 export function AppSidebar() {
