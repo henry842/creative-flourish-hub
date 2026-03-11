@@ -46,73 +46,106 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Use tool calling to get structured output
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: `Você é um analista financeiro especializado. Analise o texto do documento financeiro fornecido e extraia métricas de saúde financeira. Avalie cada categoria de 0 a 100. Identifique red flags (riscos críticos) e eventos importantes com suas datas.`
-          },
-          {
-            role: "user",
-            content: `Analise este documento financeiro${ticker ? ` da empresa ${ticker}` : ""}:\n\n${text.slice(0, 15000)}`
-          }
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "submit_financial_analysis",
-              description: "Submit the complete financial health analysis of a document",
-              parameters: {
-                type: "object",
-                properties: {
-                  overall_score: { type: "integer", description: "Overall financial health score 0-100" },
-                  revenue_growth: { type: "integer", description: "Revenue growth score 0-100" },
-                  net_margin: { type: "integer", description: "Net margin quality score 0-100" },
-                  debt_level: { type: "integer", description: "Debt health score 0-100 (100 = low debt, healthy)" },
-                  earnings_quality: { type: "integer", description: "Earnings quality score 0-100" },
-                  regulatory_risk: { type: "integer", description: "Regulatory risk score 0-100 (100 = low risk)" },
-                  sentiment: { type: "string", enum: ["bullish", "bearish", "neutral"], description: "Overall sentiment" },
-                  confidence: { type: "number", description: "Confidence level 0-1" },
-                  summary: { type: "string", description: "Brief analysis summary in Portuguese (2-3 sentences)" },
-                  price_target_low: { type: "integer", description: "Conservative price target in the stock's currency (e.g. USD or BRL). If not applicable, use 0" },
-                  price_target_high: { type: "integer", description: "Optimistic price target in the stock's currency. If not applicable, use 0" },
-                  price_target_rationale: { type: "string", description: "Brief rationale for the price target in Portuguese (1-2 sentences)" },
-                  red_flags: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Up to 5 critical risk flags in Portuguese"
-                  },
-                  timeline_events: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        date: { type: "string", description: "Date or period (e.g., 'Q3 2025', 'Mar 2025')" },
-                        event: { type: "string", description: "Event description in Portuguese" }
-                      },
-                      required: ["date", "event"]
-                    },
-                    description: "Key financial events extracted from the document"
-                  }
+    // Models to try in order (cheapest first)
+    const models = [
+      "google/gemini-2.5-flash-lite",
+      "google/gemini-2.5-flash",
+      "google/gemini-3-flash-preview",
+    ];
+
+    const buildBody = (model: string) => JSON.stringify({
+      model,
+      messages: [
+        {
+          role: "system",
+          content: `Você é um analista financeiro especializado. Analise o texto do documento financeiro fornecido e extraia métricas de saúde financeira. Avalie cada categoria de 0 a 100. Identifique red flags (riscos críticos) e eventos importantes com suas datas.`
+        },
+        {
+          role: "user",
+          content: `Analise este documento financeiro${ticker ? ` da empresa ${ticker}` : ""}:\n\n${text.slice(0, 15000)}`
+        }
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "submit_financial_analysis",
+            description: "Submit the complete financial health analysis of a document",
+            parameters: {
+              type: "object",
+              properties: {
+                overall_score: { type: "integer", description: "Overall financial health score 0-100" },
+                revenue_growth: { type: "integer", description: "Revenue growth score 0-100" },
+                net_margin: { type: "integer", description: "Net margin quality score 0-100" },
+                debt_level: { type: "integer", description: "Debt health score 0-100 (100 = low debt, healthy)" },
+                earnings_quality: { type: "integer", description: "Earnings quality score 0-100" },
+                regulatory_risk: { type: "integer", description: "Regulatory risk score 0-100 (100 = low risk)" },
+                sentiment: { type: "string", enum: ["bullish", "bearish", "neutral"], description: "Overall sentiment" },
+                confidence: { type: "number", description: "Confidence level 0-1" },
+                summary: { type: "string", description: "Brief analysis summary in Portuguese (2-3 sentences)" },
+                price_target_low: { type: "integer", description: "Conservative price target in the stock's currency. If not applicable, use 0" },
+                price_target_high: { type: "integer", description: "Optimistic price target in the stock's currency. If not applicable, use 0" },
+                price_target_rationale: { type: "string", description: "Brief rationale for the price target in Portuguese (1-2 sentences)" },
+                red_flags: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Up to 5 critical risk flags in Portuguese"
                 },
-                required: ["overall_score", "revenue_growth", "net_margin", "debt_level", "earnings_quality", "regulatory_risk", "sentiment", "confidence", "summary", "price_target_low", "price_target_high", "price_target_rationale", "red_flags", "timeline_events"],
-                additionalProperties: false
-              }
+                timeline_events: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      date: { type: "string", description: "Date or period (e.g., 'Q3 2025', 'Mar 2025')" },
+                      event: { type: "string", description: "Event description in Portuguese" }
+                    },
+                    required: ["date", "event"]
+                  },
+                  description: "Key financial events extracted from the document"
+                }
+              },
+              required: ["overall_score", "revenue_growth", "net_margin", "debt_level", "earnings_quality", "regulatory_risk", "sentiment", "confidence", "summary", "price_target_low", "price_target_high", "price_target_rationale", "red_flags", "timeline_events"],
+              additionalProperties: false
             }
           }
-        ],
-        tool_choice: { type: "function", function: { name: "submit_financial_analysis" } }
-      }),
+        }
+      ],
+      tool_choice: { type: "function", function: { name: "submit_financial_analysis" } }
     });
+
+    let response: Response | null = null;
+    let lastError = "";
+    for (const model of models) {
+      console.log(`Trying model: ${model}`);
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: buildBody(model),
+      });
+      if (res.ok) {
+        response = res;
+        break;
+      }
+      lastError = await res.text();
+      console.error(`Model ${model} failed (${res.status}):`, lastError);
+      // Only retry on 402/429/5xx
+      if (res.status !== 402 && res.status !== 429 && res.status >= 400 && res.status < 500) {
+        return new Response(JSON.stringify({ error: lastError }), {
+          status: res.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (!response) {
+      return new Response(JSON.stringify({ error: "Todos os modelos de IA falharam. Tente novamente em alguns minutos." }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
