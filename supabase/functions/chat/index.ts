@@ -89,6 +89,7 @@ serve(async (req) => {
           model,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
+            ...(documentContext ? [{ role: "system", content: `O usuário selecionou o seguinte documento para análise. Use-o como base para responder:\n\n${documentContext}` }] : []),
             ...messages,
           ],
           stream: true,
