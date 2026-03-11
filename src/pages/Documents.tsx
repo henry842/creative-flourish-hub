@@ -195,9 +195,13 @@ export default function Documents() {
   const handleSaveEdit = async () => {
     if (!editingDoc || !editName.trim()) return;
     setSaving(true);
+    const updateData: any = { name: editName.trim(), ticker: editTicker.trim().toUpperCase() || null };
+    if (editExtractedText.trim()) {
+      updateData.extracted_text = editExtractedText.trim();
+    }
     const { error } = await supabase
       .from("documents")
-      .update({ name: editName.trim(), ticker: editTicker.trim().toUpperCase() || null })
+      .update(updateData)
       .eq("id", editingDoc.id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
