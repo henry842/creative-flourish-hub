@@ -189,6 +189,7 @@ export default function Documents() {
     setEditingDoc(doc);
     setEditName(doc.name);
     setEditTicker(doc.ticker || "");
+    setEditExtractedText(doc.extracted_text || "");
   };
 
   const handleSaveEdit = async () => {
