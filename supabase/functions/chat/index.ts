@@ -51,7 +51,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, documentContext } = await req.json();
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
 
@@ -89,6 +89,7 @@ serve(async (req) => {
           model,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
+            ...(documentContext ? [{ role: "system", content: `O usuário selecionou o seguinte documento para análise. Use-o como base para responder:\n\n${documentContext}` }] : []),
             ...messages,
           ],
           stream: true,
