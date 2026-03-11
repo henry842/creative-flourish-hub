@@ -24,6 +24,7 @@ const navItems = [
   { title: "Sentimento", url: "/sentiment", icon: TrendingUp },
   { title: "Comparar", url: "/compare", icon: Swords },
   { title: "Ranking", url: "/ranking", icon: Trophy },
+  { title: "Perfil", url: "/profile", icon: UserCircle },
 ];
 
 export function AppSidebar() {
