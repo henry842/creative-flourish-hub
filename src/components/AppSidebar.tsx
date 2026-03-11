@@ -66,7 +66,8 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-2 space-y-1">
+      <SidebarFooter className="p-2 space-y-2">
+        {!collapsed && <GroqCreditCounter />}
         <Button
           variant="ghost"
           size={collapsed ? "icon" : "sm"}
