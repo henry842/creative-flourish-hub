@@ -341,7 +341,7 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
         continue;
       }
       
-      if (res.status !== 429 && res.status >= 400 && res.status < 500) {
+      if (res.status !== 429 && res.status !== 413 && res.status >= 400 && res.status < 500) {
         return new Response(JSON.stringify({ error: lastError }), {
           status: res.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
