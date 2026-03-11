@@ -8,15 +8,67 @@ const corsHeaders = {
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+async function extractTextFromPdf(pdfBytes: Uint8Array): Promise<string> {
+  // Simple PDF text extraction - handles most text-based PDFs
+  const decoder = new TextDecoder("latin1");
+  const raw = decoder.decode(pdfBytes);
+  
+  const textChunks: string[] = [];
+  
+  // Extract text from PDF stream objects
+  const streamRegex = /stream\r?\n([\s\S]*?)endstream/g;
+  let match;
+  while ((match = streamRegex.exec(raw)) !== null) {
+    const content = match[1];
+    // Look for text operations in PDF content streams
+    const textOpRegex = /\(([^)]*)\)\s*Tj|\[(.*?)\]\s*TJ/g;
+    let textMatch;
+    while ((textMatch = textOpRegex.exec(content)) !== null) {
+      const text = textMatch[1] || textMatch[2];
+      if (text) {
+        // Clean up TJ array format
+        const cleaned = text.replace(/\)\s*[-\d.]+\s*\(/g, "").replace(/^\(|\)$/g, "");
+        if (cleaned.trim()) {
+          textChunks.push(cleaned);
+        }
+      }
+    }
+    
+    // Also look for BT...ET text blocks with Td/Tm positioning
+    const btBlocks = content.match(/BT[\s\S]*?ET/g);
+    if (btBlocks) {
+      for (const block of btBlocks) {
+        const texts = block.match(/\(([^)]+)\)/g);
+        if (texts) {
+          for (const t of texts) {
+            const clean = t.slice(1, -1).trim();
+            if (clean) textChunks.push(clean);
+          }
+        }
+      }
+    }
+  }
+  
+  // Deduplicate consecutive identical chunks
+  const deduped: string[] = [];
+  for (const chunk of textChunks) {
+    if (deduped[deduped.length - 1] !== chunk) {
+      deduped.push(chunk);
+    }
+  }
+  
+  return deduped.join(" ").replace(/\s+/g, " ").trim();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { document_id, text, ticker } = await req.json();
-    if (!document_id || !text) {
-      return new Response(JSON.stringify({ error: "document_id and text are required" }), {
+    const { document_id, ticker } = await req.json();
+    if (!document_id) {
+      return new Response(JSON.stringify({ error: "document_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -47,6 +99,57 @@ serve(async (req) => {
 
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
+
+    // Fetch document record to get file_path
+    const { data: docRecord, error: docError } = await supabase
+      .from("documents")
+      .select("file_path, name, extracted_text")
+      .eq("id", document_id)
+      .single();
+
+    if (docError || !docRecord) {
+      return new Response(JSON.stringify({ error: "Document not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Extract text from PDF if not already extracted
+    let text = docRecord.extracted_text;
+    if (!text) {
+      console.log(`Downloading PDF from storage: ${docRecord.file_path}`);
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from("documents")
+        .download(docRecord.file_path);
+
+      if (downloadError || !fileData) {
+        console.error("PDF download error:", downloadError);
+        return new Response(JSON.stringify({ error: "Falha ao baixar o PDF do storage" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const pdfBytes = new Uint8Array(await fileData.arrayBuffer());
+      console.log(`PDF size: ${pdfBytes.length} bytes`);
+      
+      text = await extractTextFromPdf(pdfBytes);
+      console.log(`Extracted text length: ${text.length} chars`);
+
+      if (text.length < 50) {
+        // Fallback: the PDF might be image-based or have complex encoding
+        text = `[Texto extraído limitado do PDF "${docRecord.name}". O documento pode conter imagens ou formatação complexa que não pôde ser totalmente extraída.]`;
+        console.warn("Extracted text too short, PDF may be image-based");
+      }
+
+      // Save extracted text to database
+      await supabase
+        .from("documents")
+        .update({ extracted_text: text })
+        .eq("id", document_id);
+      
+      console.log("Saved extracted_text to documents table");
+    }
 
     // Track usage helper
     const incrementUsage = async () => {
@@ -81,7 +184,9 @@ serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: `Você é um analista financeiro especializado. Analise o texto do documento financeiro fornecido e extraia métricas de saúde financeira. Avalie cada categoria de 0 a 100. Identifique red flags (riscos críticos) e eventos importantes com suas datas.`
+          content: `Você é um analista financeiro especializado. Analise o texto do documento financeiro fornecido e extraia métricas de saúde financeira. Avalie cada categoria de 0 a 100. Identifique red flags (riscos críticos) e eventos importantes com suas datas.
+
+IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento fornecido. NÃO invente dados, métricas ou informações que não estejam no documento. Se uma métrica não puder ser determinada a partir do documento, use o valor 50 (neutro) e mencione na summary que a informação não estava disponível.`
         },
         {
           role: "user",
@@ -112,7 +217,7 @@ serve(async (req) => {
                 red_flags: {
                   type: "array",
                   items: { type: "string" },
-                  description: "Up to 5 critical risk flags in Portuguese"
+                  description: "Up to 5 critical risk flags in Portuguese, based ONLY on document content"
                 },
                 timeline_events: {
                   type: "array",

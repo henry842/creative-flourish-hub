@@ -89,7 +89,7 @@ serve(async (req) => {
           model,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            ...(documentContext ? [{ role: "system", content: `O usuário selecionou o seguinte documento para análise. Use-o como base para responder:\n\n${documentContext}` }] : []),
+            ...(documentContext ? [{ role: "system", content: `INSTRUÇÃO CRÍTICA: Baseie sua resposta APENAS nas informações do documento a seguir. NÃO invente dados, métricas, preços ou informações que não estejam explicitamente no documento. Se não encontrar uma informação no documento, diga claramente que não encontrou.\n\nDocumento selecionado:\n\n${documentContext}` }] : []),
             ...messages,
           ],
           stream: true,
