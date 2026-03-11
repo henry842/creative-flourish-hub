@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -43,14 +45,13 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
 
-    // Models to try in order (cheapest first)
+    // Groq models to try (best first, then fallbacks)
     const models = [
-      "google/gemini-2.5-flash-lite",
-      "google/gemini-2.5-flash",
-      "google/gemini-3-flash-preview",
+      "llama-3.3-70b-versatile",
+      "llama-3.1-8b-instant",
     ];
 
     const buildBody = (model: string) => JSON.stringify({
@@ -116,11 +117,11 @@ serve(async (req) => {
     let response: Response | null = null;
     let lastError = "";
     for (const model of models) {
-      console.log(`Trying model: ${model}`);
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      console.log(`Trying Groq model: ${model}`);
+      const res = await fetch(GROQ_API_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: buildBody(model),
@@ -130,9 +131,8 @@ serve(async (req) => {
         break;
       }
       lastError = await res.text();
-      console.error(`Model ${model} failed (${res.status}):`, lastError);
-      // Only retry on 402/429/5xx
-      if (res.status !== 402 && res.status !== 429 && res.status >= 400 && res.status < 500) {
+      console.error(`Groq model ${model} failed (${res.status}):`, lastError);
+      if (res.status !== 429 && res.status >= 400 && res.status < 500) {
         return new Response(JSON.stringify({ error: lastError }), {
           status: res.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -141,7 +141,7 @@ serve(async (req) => {
     }
 
     if (!response) {
-      return new Response(JSON.stringify({ error: "Todos os modelos de IA falharam. Tente novamente em alguns minutos." }), {
+      return new Response(JSON.stringify({ error: "Todos os modelos Groq falharam. Tente novamente em alguns minutos." }), {
         status: 503,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -149,20 +149,14 @@ serve(async (req) => {
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns instantes." }), {
+        return new Response(JSON.stringify({ error: "Rate limit Groq excedido. Tente novamente em alguns instantes." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      throw new Error("AI gateway error");
+      console.error("Groq API error:", response.status, t);
+      throw new Error("Groq API error");
     }
 
     const aiResult = await response.json();
