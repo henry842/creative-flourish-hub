@@ -39,7 +39,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 py-4">
+          <SidebarGroupLabel className="px-3 py-4 cursor-pointer" onClick={() => navigate("/")}>
             {!collapsed && (
               <span className="font-display text-lg font-bold gradient-text">FinSight AI</span>
             )}
