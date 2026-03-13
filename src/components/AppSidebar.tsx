@@ -1,6 +1,6 @@
 import { LayoutDashboard, FileText, MessageSquare, TrendingUp, Swords, Trophy, LogOut, Sun, Moon, UserCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { GroqCreditCounter } from "@/components/GroqCreditCounter";
@@ -32,6 +32,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
   const { signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -39,7 +40,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 py-4">
+          <SidebarGroupLabel className="px-3 py-4 cursor-pointer" onClick={() => navigate("/")}>
             {!collapsed && (
               <span className="font-display text-lg font-bold gradient-text">FinSight AI</span>
             )}
