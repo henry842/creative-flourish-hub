@@ -246,6 +246,39 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      {/* Last Briefing Card */}
+      <Card className="glass hover:shadow-lg transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="font-display flex items-center gap-2">
+            <Bell className="h-5 w-5 text-primary" /> Último Briefing
+          </CardTitle>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/briefing")}>
+            Ver completo →
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {lastBrief ? (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">
+                {new Date(lastBrief.created_at).toLocaleDateString("pt-BR", {
+                  weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                })}
+              </p>
+              <p className="text-sm line-clamp-3">
+                {lastBrief.content.split("\n").filter(l => l.trim()).slice(0, 3).join(" ").substring(0, 200)}...
+              </p>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground mb-2">Nenhum briefing gerado ainda</p>
+              <Button variant="secondary" size="sm" onClick={() => navigate("/briefing")}>
+                Configurar Briefing
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="glass lg:col-span-2">
           <CardHeader>
