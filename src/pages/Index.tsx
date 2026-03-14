@@ -17,6 +17,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import { toast } from "@/hooks/use-toast";
+import { PortfolioCharts } from "@/components/PortfolioCharts";
 
 interface Stats {
   totalDocs: number;
