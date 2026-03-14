@@ -82,27 +82,18 @@ function extractTextFromPdfStreams(pdfBytes: Uint8Array): string {
 }
 
 async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string): Promise<string> {
-  console.log("Using Gemini Vision for PDF text extraction...");
+  console.log(`Using Gemini Vision for PDF text extraction (${pdfBytes.length} bytes)...`);
   
-  // Convert to base64 safely (single btoa call to avoid invalid chunked base64)
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let i = 0; i < pdfBytes.length; i += chunkSize) {
-    const chunk = pdfBytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode(...chunk);
-  }
-  const base64Pdf = btoa(binary);
+  // Use Deno's standard base64 encoder for correct encoding of binary data
+  const base64Pdf = base64Encode(pdfBytes);
+  console.log(`Base64 encoded: ${base64Pdf.length} chars`);
   
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
-
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    signal: controller.signal,
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
@@ -114,10 +105,9 @@ async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string)
               text: "Extraia TODO o texto visível deste documento PDF de forma organizada. Mantenha a estrutura original: títulos, subtítulos, tabelas (formate como texto), números, datas, rodapés. Inclua TODOS os dados numéricos e financeiros. Retorne APENAS o texto extraído, sem comentários ou explicações adicionais."
             },
             {
-              type: "file",
-              file: {
-                filename: "documento.pdf",
-                file_data: `data:application/pdf;base64,${base64Pdf}`
+              type: "image_url",
+              image_url: {
+                url: `data:application/pdf;base64,${base64Pdf}`
               }
             }
           ]
@@ -126,11 +116,9 @@ async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string)
     }),
   });
 
-  clearTimeout(timeoutId);
-
   if (!response.ok) {
     const errText = await response.text();
-    console.error("Gemini Vision error:", response.status, errText);
+    console.error("Gemini Vision error:", response.status, errText.slice(0, 500));
     throw new Error(`Gemini Vision failed: ${response.status}`);
   }
 
