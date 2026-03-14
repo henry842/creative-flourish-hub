@@ -62,11 +62,21 @@ serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization");
     let userId: string | null = null;
+    let customPrompt: string | null = null;
     if (authHeader) {
       const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
       const token = authHeader.replace("Bearer ", "");
       const { data: { user } } = await anonClient.auth.getUser(token);
       userId = user?.id ?? null;
+
+      if (userId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("custom_prompt")
+          .eq("user_id", userId)
+          .single();
+        customPrompt = profile?.custom_prompt || null;
+      }
     }
 
     // Groq models to try in order
