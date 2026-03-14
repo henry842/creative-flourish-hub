@@ -482,16 +482,17 @@ Vencedor: ${winner || "Empate"} (${Object.entries(wins).map(([t, c]) => `${t}: $
                     <div className={`grid gap-4 items-center ${selectedTickers.length === 3 ? "grid-cols-[1fr_auto_1fr_auto_1fr]" : "grid-cols-[1fr_auto_1fr]"}`}>
                       {selectedScores.map((s, i) => {
                         const v = s[key];
+                        const inv = INVERTED_KEYS.has(key);
                         const isWinner = !isTied && v === maxVal;
                         return (
                           <div key={selectedTickers[i]} className={i === 0 ? "text-right" : ""}>
                             <div className={`flex items-center gap-2 ${i === 0 ? "justify-end" : ""}`}>
                               {isWinner && <Trophy className="h-4 w-4 text-neutral" />}
-                              <span className={`text-2xl font-display font-bold ${scoreColor(v)}`}>{v}</span>
+                              <span className={`text-2xl font-display font-bold ${inv ? scoreColorInv(v) : scoreColor(v)}`}>{v}</span>
                             </div>
                             <div className="h-2 rounded-full bg-muted overflow-hidden mt-2">
                               <div
-                                className={`h-full rounded-full ${scoreBg(v)} ${i === 0 ? "ml-auto" : ""}`}
+                                className={`h-full rounded-full ${inv ? scoreBgInv(v) : scoreBg(v)} ${i === 0 ? "ml-auto" : ""}`}
                                 style={{ width: `${v}%` }}
                               />
                             </div>
