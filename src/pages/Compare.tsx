@@ -57,6 +57,12 @@ function scoreBg(score: number) {
   return "bg-bearish";
 }
 
+// Inverted: low = good (green), high = bad (red) — for regulatory_risk
+function scoreColorInv(s: number) { return s <= 30 ? "text-bullish" : s <= 60 ? "text-neutral" : "text-bearish"; }
+function scoreBgInv(s: number) { return s <= 30 ? "bg-bullish" : s <= 60 ? "bg-neutral" : "bg-bearish"; }
+
+const INVERTED_KEYS = new Set(["regulatory_risk"]);
+
 function parseRedFlags(flags: Json | null): string[] {
   if (!flags) return [];
   if (Array.isArray(flags)) return flags.map((f) => (typeof f === "string" ? f : typeof f === "object" && f !== null && "text" in f ? String((f as any).text) : JSON.stringify(f)));

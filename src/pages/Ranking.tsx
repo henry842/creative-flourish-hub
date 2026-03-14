@@ -70,6 +70,11 @@ function parseRedFlags(flags: Json | null): string[] {
 
 function scoreColor(s: number) { return s >= 80 ? "text-bullish" : s >= 60 ? "text-neutral" : "text-bearish"; }
 function scoreBg(s: number) { return s >= 80 ? "bg-bullish" : s >= 60 ? "bg-neutral" : "bg-bearish"; }
+// Inverted: low = good (green), high = bad (red) — for regulatory_risk
+function scoreColorInv(s: number) { return s <= 30 ? "text-bullish" : s <= 60 ? "text-neutral" : "text-bearish"; }
+function scoreBgInv(s: number) { return s <= 30 ? "bg-bullish" : s <= 60 ? "bg-neutral" : "bg-bearish"; }
+
+const INVERTED_KEYS = new Set(["regulatory_risk"]);
 
 function inferAssetType(ticker: string): string {
   const t = ticker.toUpperCase();
