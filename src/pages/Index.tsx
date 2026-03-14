@@ -81,6 +81,9 @@ export default function Dashboard() {
       sentimentCounts: counts,
       recentSentiments: Object.entries(byDate).map(([date, v]) => ({ date, ...v })).reverse(),
     });
+    if (briefRes.data && briefRes.data.length > 0) {
+      setLastBrief(briefRes.data[0] as any);
+    }
     setLoading(false);
   };
 
