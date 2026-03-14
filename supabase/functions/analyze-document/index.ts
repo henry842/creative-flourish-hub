@@ -164,6 +164,15 @@ serve(async (req) => {
       });
     }
 
+    // Fetch user's custom prompt
+    let customPrompt: string | null = null;
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("custom_prompt")
+      .eq("user_id", user.id)
+      .single();
+    customPrompt = profileData?.custom_prompt || null;
+
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
 
@@ -303,7 +312,7 @@ PASSO 4 — REGRAS UNIVERSAIS:
 3. Red flags = pontos críticos ou preocupantes do documento
 4. Timeline = eventos ou etapas importantes mencionados
 5. Se o documento for em outro idioma, analise normalmente e responda em português
-6. Se uma métrica não puder ser determinada, use o valor 50 (neutro) e mencione na summary`
+6. Se uma métrica não puder ser determinada, use o valor 50 (neutro) e mencione na summary${customPrompt ? `\n\nCONTEXTO DO USUÁRIO: ${customPrompt}. Considere sempre esse contexto ao analisar o documento.` : ''}`
         },
         {
           role: "user",

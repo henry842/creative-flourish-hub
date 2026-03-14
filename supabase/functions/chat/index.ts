@@ -62,11 +62,21 @@ serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization");
     let userId: string | null = null;
+    let customPrompt: string | null = null;
     if (authHeader) {
       const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
       const token = authHeader.replace("Bearer ", "");
       const { data: { user } } = await anonClient.auth.getUser(token);
       userId = user?.id ?? null;
+
+      if (userId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("custom_prompt")
+          .eq("user_id", userId)
+          .single();
+        customPrompt = profile?.custom_prompt || null;
+      }
     }
 
     // Groq models to try in order
@@ -88,7 +98,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
+            { role: "system", content: customPrompt ? `${SYSTEM_PROMPT}\n\nCONTEXTO DO USUÁRIO: ${customPrompt}. Considere sempre esse contexto ao responder.` : SYSTEM_PROMPT },
             ...(documentContext ? [{ role: "system", content: `INSTRUÇÃO CRÍTICA: Baseie sua resposta APENAS nas informações do documento a seguir. NÃO invente dados, métricas, preços ou informações que não estejam explicitamente no documento. Se não encontrar uma informação no documento, diga claramente que não encontrou.\n\nDocumento selecionado:\n\n${documentContext}` }] : []),
             ...messages,
           ],

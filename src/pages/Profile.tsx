@@ -5,17 +5,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { UserCircle, Save, KeyRound, Trash2 } from "lucide-react";
+import { UserCircle, Save, KeyRound, Trash2, Sparkles } from "lucide-react";
+
+const PROMPT_EXAMPLES = [
+  "Sou investidor focado em FIIs de papel e tijolo",
+  "Sou médico e preciso analisar laudos e estudos clínicos",
+  "Sou estudante de direito e analiso contratos e legislação",
+  "Sou analista financeiro focado em ações brasileiras",
+];
 
 export default function Profile() {
   const { user, signOut } = useAuth();
   const [displayName, setDisplayName] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingPrompt, setSavingPrompt] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
@@ -26,11 +37,12 @@ export default function Profile() {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("display_name")
+      .select("display_name, custom_prompt")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
         if (data?.display_name) setDisplayName(data.display_name);
+        if ((data as any)?.custom_prompt) setCustomPrompt((data as any).custom_prompt);
       });
   }, [user]);
 
@@ -47,6 +59,21 @@ export default function Profile() {
       toast({ title: "Nome atualizado ✅" });
     }
     setSaving(false);
+  };
+
+  const handleSavePrompt = async () => {
+    if (!user) return;
+    setSavingPrompt(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ custom_prompt: customPrompt.trim() || null } as any)
+      .eq("user_id", user.id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Prompt personalizado salvo ✅" });
+    }
+    setSavingPrompt(false);
   };
 
   const handleChangePassword = async () => {
@@ -123,6 +150,45 @@ export default function Profile() {
           <Button onClick={handleSaveName} disabled={saving || !displayName.trim()} className="gap-2">
             <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar"}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Custom prompt */}
+      <Card className="glass border-primary/20">
+        <CardHeader>
+          <CardTitle className="font-display text-lg flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" /> Meu Assistente Personalizado
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Descreva quem você é e como quer que a IA se comporte. Esse contexto será usado em todas as análises e conversas.
+          </p>
+          <Textarea
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            placeholder="Ex: Sou investidor focado em FIIs de papel e tijolo, busco rendimento mensal acima do CDI..."
+            className="min-h-[100px] resize-y"
+            maxLength={1000}
+          />
+          <div className="flex flex-wrap gap-2">
+            {PROMPT_EXAMPLES.map((example) => (
+              <Badge
+                key={example}
+                variant="outline"
+                className="cursor-pointer hover:bg-primary/10 transition-colors"
+                onClick={() => setCustomPrompt(example)}
+              >
+                {example}
+              </Badge>
+            ))}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">{customPrompt.length}/1000 caracteres</span>
+            <Button onClick={handleSavePrompt} disabled={savingPrompt} className="gap-2">
+              <Save className="h-4 w-4" /> {savingPrompt ? "Salvando..." : "Salvar prompt"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
