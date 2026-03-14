@@ -68,13 +68,14 @@ function extractTextFromPdfStreams(pdfBytes: Uint8Array): string {
 async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string): Promise<string> {
   console.log("Using Gemini Vision for PDF text extraction...");
   
-  // Convert to base64 in chunks to avoid stack overflow on large files
-  let base64Pdf = "";
-  const chunkSize = 32768;
+  // Convert to base64 safely (single btoa call to avoid invalid chunked base64)
+  let binary = "";
+  const chunkSize = 0x8000;
   for (let i = 0; i < pdfBytes.length; i += chunkSize) {
-    const chunk = pdfBytes.slice(i, i + chunkSize);
-    base64Pdf += btoa(String.fromCharCode(...chunk));
+    const chunk = pdfBytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
   }
+  const base64Pdf = btoa(binary);
   
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
