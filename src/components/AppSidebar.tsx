@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Meus Ativos", url: "/assets", icon: FolderOpen },
-  { title: "Documentos", url: "/documents", icon: FileText },
   { title: "Chat IA", url: "/chat", icon: MessageSquare },
   { title: "Sentimento", url: "/sentiment", icon: TrendingUp },
   { title: "Comparar", url: "/compare", icon: Swords },
