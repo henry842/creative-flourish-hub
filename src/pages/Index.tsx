@@ -69,6 +69,9 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [portfolioHealth, setPortfolioHealth] = useState<PortfolioHealth | null>(null);
   const [nextBriefTime, setNextBriefTime] = useState<string | null>(null);
+  const [allScores, setAllScores] = useState<any[]>([]);
+  const [allAssets, setAllAssets] = useState<any[]>([]);
+  const [latestByAssetId, setLatestByAssetId] = useState<Record<string, { score: number; sentiment: string }>>({});
   const [loading, setLoading] = useState(true);
   const [newTicker, setNewTicker] = useState("");
   const [addingTicker, setAddingTicker] = useState(false);
