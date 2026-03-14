@@ -198,6 +198,16 @@ export default function Briefing() {
   };
 
   const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  if (loading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
