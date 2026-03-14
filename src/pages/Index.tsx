@@ -139,12 +139,16 @@ export default function Dashboard() {
     setWatchlist(wl);
 
     // Ranked assets (top 3 by health score)
-    const latestByAssetId: Record<string, { score: number; sentiment: string }> = {};
+    const latestByAssetIdMap: Record<string, { score: number; sentiment: string }> = {};
     scores.forEach((s) => {
-      if (s.asset_id && !latestByAssetId[s.asset_id]) {
-        latestByAssetId[s.asset_id] = { score: s.overall_score, sentiment: s.sentiment || "neutral" };
+      if (s.asset_id && !latestByAssetIdMap[s.asset_id]) {
+        latestByAssetIdMap[s.asset_id] = { score: s.overall_score, sentiment: s.sentiment || "neutral" };
       }
     });
+
+    setAllScores(scores);
+    setAllAssets(assets);
+    setLatestByAssetId(latestByAssetIdMap);
 
     const ranked = assets
       .filter((a) => latestByAssetId[a.id])
