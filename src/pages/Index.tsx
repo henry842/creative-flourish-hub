@@ -27,8 +27,10 @@ interface WatchlistItem {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [lastBrief, setLastBrief] = useState<{ content: string; created_at: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [newTicker, setNewTicker] = useState("");
   const [addingTicker, setAddingTicker] = useState(false);
