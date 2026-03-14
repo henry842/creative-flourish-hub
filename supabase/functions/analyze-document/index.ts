@@ -164,6 +164,15 @@ serve(async (req) => {
       });
     }
 
+    // Fetch user's custom prompt
+    let customPrompt: string | null = null;
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("custom_prompt")
+      .eq("user_id", user.id)
+      .single();
+    customPrompt = profileData?.custom_prompt || null;
+
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
 
