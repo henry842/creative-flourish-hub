@@ -33,6 +33,10 @@ export default function Profile() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [groqUsageToday, setGroqUsageToday] = useState(0);
+  const [groqUsageMonth, setGroqUsageMonth] = useState(0);
+  const [totalAnalyses, setTotalAnalyses] = useState(0);
+  const [totalBriefings, setTotalBriefings] = useState(0);
 
   useEffect(() => {
     if (!user) return;
