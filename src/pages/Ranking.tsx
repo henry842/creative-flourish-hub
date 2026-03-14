@@ -523,7 +523,6 @@ ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentim
                               </li>
                             ))}
                           </ul>
-                          </div>
                         </div>
                       )}
 
