@@ -79,6 +79,30 @@ export type Database = {
           },
         ]
       }
+      daily_briefs: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          tickers: string[] | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          tickers?: string[] | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          tickers?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           asset_id: string | null
@@ -301,6 +325,78 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scheduled_brief_assets: {
+        Row: {
+          asset_id: string
+          created_at: string
+          id: string
+          scheduled_brief_id: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          id?: string
+          scheduled_brief_id: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          id?: string
+          scheduled_brief_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_brief_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_brief_assets_scheduled_brief_id_fkey"
+            columns: ["scheduled_brief_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_briefs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_briefs: {
+        Row: {
+          created_at: string
+          id: string
+          include_macro: boolean
+          include_news: boolean
+          is_active: boolean
+          last_run_at: string | null
+          notify_email: boolean
+          schedule_time: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          include_macro?: boolean
+          include_news?: boolean
+          is_active?: boolean
+          last_run_at?: string | null
+          notify_email?: boolean
+          schedule_time?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          include_macro?: boolean
+          include_news?: boolean
+          is_active?: boolean
+          last_run_at?: string | null
+          notify_email?: boolean
+          schedule_time?: string
           user_id?: string
         }
         Relationships: []
