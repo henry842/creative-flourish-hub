@@ -92,12 +92,16 @@ async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string)
   }
   const base64Pdf = btoa(binary);
   
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
+
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
+    signal: controller.signal,
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
@@ -120,6 +124,8 @@ async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string)
       ],
     }),
   });
+
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errText = await response.text();
