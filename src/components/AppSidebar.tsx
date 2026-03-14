@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, MessageSquare, TrendingUp, Swords, Trophy, LogOut, Sun, Moon, UserCircle, FolderOpen, Bell } from "lucide-react";
+import { LayoutDashboard, MessageSquare, TrendingUp, Swords, Trophy, LogOut, Sun, Moon, UserCircle, FolderOpen, Bell } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Meus Ativos", url: "/assets", icon: FolderOpen },
-  { title: "Documentos", url: "/documents", icon: FileText },
   { title: "Chat IA", url: "/chat", icon: MessageSquare },
   { title: "Sentimento", url: "/sentiment", icon: TrendingUp },
   { title: "Comparar", url: "/compare", icon: Swords },

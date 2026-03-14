@@ -11,7 +11,6 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Index";
-import Documents from "./pages/Documents";
 import Chat from "./pages/Chat";
 import Sentiment from "./pages/Sentiment";
 import Compare from "./pages/Compare";
@@ -52,7 +51,7 @@ const App = () => (
               <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
+              <Route path="/documents" element={<ProtectedRoute><Navigate to="/assets" replace /></ProtectedRoute>} />
               <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
               <Route path="/sentiment" element={<ProtectedRoute><Sentiment /></ProtectedRoute>} />
               <Route path="/compare" element={<ProtectedRoute><Compare /></ProtectedRoute>} />
