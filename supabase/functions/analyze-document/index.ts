@@ -304,7 +304,7 @@ Os scores de 0-100 devem refletir a área do documento:
 - net_margin → use como "qualidade das informações" (0-100)
 - debt_level → use como "clareza e organização" (0-100)
 - earnings_quality → use como "confiabilidade das fontes" (0-100)
-- regulatory_risk → use como "riscos identificados" (0-100 onde 100 = baixo risco)
+- regulatory_risk → nível de risco regulatório de 0-100 onde 0 = nenhum risco (ótimo) e 100 = risco máximo (péssimo). Para FIIs e ativos com pouca exposição regulatória, use valores BAIXOS (ex: 10-30) pois isso é POSITIVO
 
 PASSO 4 — REGRAS UNIVERSAIS:
 1. Nunca invente informações — use APENAS o que está no documento
@@ -333,7 +333,7 @@ PASSO 4 — REGRAS UNIVERSAIS:
                 net_margin: { type: "integer", description: "For financial: net margin. For others: information quality score 0-100" },
                 debt_level: { type: "integer", description: "For financial: debt health. For others: clarity/organization score 0-100 (100 = excellent)" },
                 earnings_quality: { type: "integer", description: "For financial: earnings quality. For others: source reliability score 0-100" },
-                regulatory_risk: { type: "integer", description: "Risk score 0-100 (100 = low risk)" },
+                regulatory_risk: { type: "integer", description: "Regulatory risk level 0-100 where 0 = no risk (best) and 100 = maximum risk (worst). For FIIs with low regulatory exposure, use LOW values like 10-30" },
                 sentiment: { type: "string", enum: ["bullish", "bearish", "neutral"], description: "Overall sentiment: bullish=positive, bearish=negative, neutral" },
                 confidence: { type: "number", description: "Confidence level 0-1" },
                 summary: { type: "string", description: "Brief analysis summary in Portuguese (2-3 sentences). Mention the document type identified." },

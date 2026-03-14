@@ -37,12 +37,31 @@ function scoreEmoji(score: number) {
   return "🔴";
 }
 
+// For regulatory_risk, LOW = good (little risk), so colors are inverted
+function scoreColorInverted(score: number) {
+  if (score <= 30) return "text-bullish";
+  if (score <= 60) return "text-neutral";
+  return "text-bearish";
+}
+
+function scoreBgInverted(score: number) {
+  if (score <= 30) return "bg-bullish";
+  if (score <= 60) return "bg-neutral";
+  return "bg-bearish";
+}
+
+function scoreEmojiInverted(score: number) {
+  if (score <= 30) return "🟢";
+  if (score <= 60) return "🟡";
+  return "🔴";
+}
+
 const categories = [
-  { key: "revenue_growth" as const, label: "Crescimento de Receita", tooltip: "Velocidade de crescimento das vendas da empresa em relação a períodos anteriores" },
-  { key: "net_margin" as const, label: "Margem Líquida", tooltip: "Percentual de lucro que sobra de cada real de receita após todos os custos" },
-  { key: "debt_level" as const, label: "Nível de Endividamento", tooltip: "Proporção de dívida em relação ao patrimônio — quanto menor, mais saudável" },
-  { key: "earnings_quality" as const, label: "Qualidade dos Lucros", tooltip: "Avalia se os lucros são recorrentes e sustentáveis, não apenas contábeis" },
-  { key: "regulatory_risk" as const, label: "Risco Regulatório", tooltip: "Exposição da empresa a mudanças em leis, regulações e políticas governamentais" },
+  { key: "revenue_growth" as const, label: "Crescimento de Receita", tooltip: "Velocidade de crescimento das vendas da empresa em relação a períodos anteriores", inverted: false },
+  { key: "net_margin" as const, label: "Margem Líquida", tooltip: "Percentual de lucro que sobra de cada real de receita após todos os custos", inverted: false },
+  { key: "debt_level" as const, label: "Nível de Endividamento", tooltip: "Proporção de dívida em relação ao patrimônio — quanto menor, mais saudável", inverted: false },
+  { key: "earnings_quality" as const, label: "Qualidade dos Lucros", tooltip: "Avalia se os lucros são recorrentes e sustentáveis, não apenas contábeis", inverted: false },
+  { key: "regulatory_risk" as const, label: "Risco Regulatório", tooltip: "Nível de risco regulatório — score baixo significa pouco risco (positivo), score alto significa muito risco (negativo)", inverted: true },
 ];
 
 function InfoTooltip({ text }: { text: string }) {
@@ -117,8 +136,11 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
 
           {/* Category Bars */}
           <div className="space-y-3">
-            {categories.map(({ key, label, tooltip }) => {
+            {categories.map(({ key, label, tooltip, inverted }) => {
               const val = score[key];
+              const colorFn = inverted ? scoreColorInverted : scoreColor;
+              const bgFn = inverted ? scoreBgInverted : scoreBg;
+              const emojiFn = inverted ? scoreEmojiInverted : scoreEmoji;
               return (
                 <div key={key} className="space-y-1">
                   <div className="flex justify-between text-sm">
@@ -126,13 +148,13 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
                       {label}
                       <InfoTooltip text={tooltip} />
                     </span>
-                    <span className={`font-medium ${scoreColor(val)}`}>
-                      {val}/100 {scoreEmoji(val)}
+                    <span className={`font-medium ${colorFn(val)}`}>
+                      {val}/100 {emojiFn(val)}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-700 ${scoreBg(val)}`}
+                      className={`h-full rounded-full transition-all duration-700 ${bgFn(val)}`}
                       style={{ width: `${val}%` }}
                     />
                   </div>
