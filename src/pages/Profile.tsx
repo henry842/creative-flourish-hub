@@ -265,6 +265,64 @@ export default function Profile() {
         </CardContent>
       </Card>
 
+      {/* AI Usage Panel */}
+      <Card className="glass border-primary/20">
+        <CardHeader>
+          <CardTitle className="font-display text-lg flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" /> Uso de IA este mês
+          </CardTitle>
+          <CardDescription>Monitoramento de consumo dos serviços de IA</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Groq daily usage */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Groq (hoje)</span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {groqUsageToday.toLocaleString()} / {GROQ_DAILY_LIMIT.toLocaleString()}
+              </span>
+            </div>
+            <Progress value={groqPercent} className="h-2" />
+            {groqWarning && (
+              <div className="flex items-center gap-2 text-xs text-neutral">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>⚠️ Uso acima de 80% do limite diário! Considere reduzir operações.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-muted/50 p-3 text-center">
+              <FileText className="h-5 w-5 mx-auto text-primary mb-1" />
+              <p className="text-2xl font-display font-bold">{totalAnalyses}</p>
+              <p className="text-xs text-muted-foreground">Análises (Groq)</p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-3 text-center">
+              <Bell className="h-5 w-5 mx-auto text-primary mb-1" />
+              <p className="text-2xl font-display font-bold">{totalBriefings}</p>
+              <p className="text-xs text-muted-foreground">Briefings gerados</p>
+            </div>
+          </div>
+
+          {/* Monthly Groq */}
+          <div className="rounded-lg bg-muted/30 p-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Groq este mês</span>
+              <span className="font-medium">{groqUsageMonth.toLocaleString()} requisições</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            💡 Briefings agora usam Groq (gratuito) em vez da Lovable AI. Análises de documentos e chat também usam Groq.
+            A Lovable AI é usada apenas para extração de PDFs por OCR (Gemini Vision).
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Delete account */}
       <Card className="glass border-destructive/20">
         <CardHeader>
