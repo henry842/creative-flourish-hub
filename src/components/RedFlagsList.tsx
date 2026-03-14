@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, HelpCircle } from "lucide-react";
+import { AlertTriangle, HelpCircle, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function RedFlagsList({ flags }: { flags: string[] }) {
@@ -7,17 +7,17 @@ export function RedFlagsList({ flags }: { flags: string[] }) {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <Card className="glass border-bearish/30">
+      <Card className="glass border-amber-500/30">
         <CardHeader className="pb-3">
-          <CardTitle className="font-display text-lg flex items-center gap-2 text-bearish">
+          <CardTitle className="font-display text-lg flex items-center gap-2 text-amber-500">
             <AlertTriangle className="h-5 w-5" />
-            Red Flags Detectadas 🚩
+            Pontos de Atenção ⚠️
             <Tooltip>
               <TooltipTrigger asChild>
                 <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-[240px] text-xs">
-                Riscos críticos detectados automaticamente pela IA na análise do documento
+                Riscos e observações importantes detectados pela IA — nem todos são negativos, alguns são pontos de atenção contextual
               </TooltipContent>
             </Tooltip>
           </CardTitle>
@@ -26,7 +26,7 @@ export function RedFlagsList({ flags }: { flags: string[] }) {
           <ul className="space-y-2">
             {flags.map((flag, i) => (
               <li key={i} className="flex items-start gap-3 text-sm">
-                <span className="text-bearish font-bold mt-0.5">!</span>
+                <Info className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                 <span className="text-foreground">{flag}</span>
               </li>
             ))}
