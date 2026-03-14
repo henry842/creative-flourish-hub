@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Send, Plus, MessageSquare, Bot, User, BookOpen, Trash2, Check, X, FileText, ChevronDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Send, Plus, MessageSquare, Bot, User, BookOpen, Trash2, Check, X,
+  FileText, Copy, RefreshCw, Download, Search, Menu,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
@@ -17,14 +21,19 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+  Drawer, DrawerContent, DrawerTrigger,
+} from "@/components/ui/drawer";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Message {
   id?: string;
   role: "user" | "assistant";
   content: string;
+  created_at?: string;
 }
 
 interface Conversation {
@@ -39,9 +48,11 @@ interface Document {
   ticker: string | null;
   status: string;
   extracted_text: string | null;
+  doc_type: string | null;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const MAX_CONTEXT_CHARS = 12000;
 
 const GLOSSARY = [
   { term: "P/E Ratio", desc: "Preço da ação dividido pelo lucro por ação — indica se está cara ou barata" },
@@ -56,8 +67,44 @@ const GLOSSARY = [
   { term: "Alavancagem", desc: "Proporção de dívida usada para financiar a empresa — maior = mais risco" },
 ];
 
+const FII_SUGGESTIONS = [
+  "Qual o Dividend Yield atual?",
+  "Como está a vacância?",
+  "Qual a distribuição por m²?",
+  "Quais os principais locatários?",
+  "Resuma os riscos do fundo",
+];
+
+const STOCK_SUGGESTIONS = [
+  "Qual o EBITDA atual?",
+  "Como estão as margens?",
+  "Qual o nível de endividamento?",
+  "Resuma os pontos fortes",
+  "Quais os riscos regulatórios?",
+];
+
+const GENERIC_SUGGESTIONS = [
+  "Qual o maior risco desse documento?",
+  "Resuma os principais números",
+  "Vale a pena investir?",
+  "Quais são os red flags?",
+  "Compare com o período anterior",
+];
+
+function getDateLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = (today.getTime() - msgDay.getTime()) / 86400000;
+  if (diff === 0) return "Hoje";
+  if (diff === 1) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
 export default function Chat() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,34 +112,51 @@ export default function Chat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Document context
+  // Multi-document context
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
 
-  // Rename state
+  // Rename/delete state
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-
-  // Delete state
   const [deletingConv, setDeletingConv] = useState<Conversation | null>(null);
 
-  const selectedDoc = documents.find((d) => d.id === selectedDocId) || null;
+  const selectedDocs = documents.filter((d) => selectedDocIds.includes(d.id));
+
+  // Context char count
+  const contextChars = useMemo(() => {
+    return selectedDocs.reduce((sum, d) => sum + (d.extracted_text?.length || 0), 0);
+  }, [selectedDocs]);
+
+  const truncatedContextChars = Math.min(contextChars, MAX_CONTEXT_CHARS);
+
+  // Dynamic suggestions based on selected docs
+  const suggestions = useMemo(() => {
+    if (selectedDocs.length === 0) return GENERIC_SUGGESTIONS;
+    const hasFII = selectedDocs.some((d) =>
+      d.name.toLowerCase().includes("fii") ||
+      d.ticker?.match(/\d{2}$/) ||
+      d.doc_type === "fii"
+    );
+    return hasFII ? FII_SUGGESTIONS : STOCK_SUGGESTIONS;
+  }, [selectedDocs]);
+
+  // Filtered conversations
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.toLowerCase();
+    return conversations.filter((c) => c.title.toLowerCase().includes(q));
+  }, [conversations, searchQuery]);
 
   const hasUsableDocContext = useCallback((doc: Document | null) => {
     if (!doc?.extracted_text) return false;
-
     const text = doc.extracted_text.trim();
     if (text.length < 500) return false;
-
     const lower = text.toLowerCase();
-    const invalidMarkers = [
-      "falha na extração",
-      "não foi possível extrair",
-      "texto extraído limitado",
-      "use o botão editar para colar",
-    ];
-
+    const invalidMarkers = ["falha na extração", "não foi possível extrair", "texto extraído limitado", "use o botão editar para colar"];
     return !invalidMarkers.some((marker) => lower.includes(marker));
   }, []);
 
@@ -102,6 +166,7 @@ export default function Chat() {
       .from("conversations")
       .select("*")
       .eq("user_id", user.id)
+      .is("asset_id", null)
       .order("updated_at", { ascending: false });
     setConversations(data || []);
     setLoadingConvs(false);
@@ -111,7 +176,7 @@ export default function Chat() {
     if (!user) return;
     const { data } = await supabase
       .from("documents")
-      .select("id, name, ticker, status, extracted_text")
+      .select("id, name, ticker, status, extracted_text, doc_type")
       .eq("user_id", user.id)
       .in("status", ["analyzed", "processed"])
       .order("created_at", { ascending: false });
@@ -125,12 +190,15 @@ export default function Chat() {
 
   const loadMessages = useCallback(async (convId: string) => {
     setActiveConv(convId);
+    setDrawerOpen(false);
     const { data } = await supabase
       .from("messages")
       .select("*")
       .eq("conversation_id", convId)
       .order("created_at", { ascending: true });
-    setMessages((data || []).map((m) => ({ id: m.id, role: m.role as "user" | "assistant", content: m.content })));
+    setMessages((data || []).map((m) => ({
+      id: m.id, role: m.role as "user" | "assistant", content: m.content, created_at: m.created_at,
+    })));
   }, []);
 
   const createConversation = async () => {
@@ -140,24 +208,17 @@ export default function Chat() {
       .insert({ user_id: user.id, title: "Nova conversa" })
       .select()
       .single();
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-      return;
-    }
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
     setConversations((prev) => [data, ...prev]);
     setActiveConv(data.id);
     setMessages([]);
+    setDrawerOpen(false);
   };
 
   const handleRenameConv = async (convId: string) => {
-    if (!renameValue.trim()) {
-      setRenamingId(null);
-      return;
-    }
+    if (!renameValue.trim()) { setRenamingId(null); return; }
     const { error } = await supabase.from("conversations").update({ title: renameValue.trim() }).eq("id", convId);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
+    if (!error) {
       setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title: renameValue.trim() } : c)));
       toast({ title: "Conversa renomeada ✅" });
     }
@@ -166,41 +227,61 @@ export default function Chat() {
 
   const handleDeleteConv = async (conv: Conversation) => {
     await supabase.from("messages").delete().eq("conversation_id", conv.id);
-    const { error } = await supabase.from("conversations").delete().eq("id", conv.id);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
-      setConversations((prev) => prev.filter((c) => c.id !== conv.id));
-      if (activeConv === conv.id) {
-        setActiveConv(null);
-        setMessages([]);
-      }
-      toast({ title: "Conversa removida" });
-    }
+    await supabase.from("conversations").delete().eq("id", conv.id);
+    setConversations((prev) => prev.filter((c) => c.id !== conv.id));
+    if (activeConv === conv.id) { setActiveConv(null); setMessages([]); }
+    toast({ title: "Conversa removida" });
     setDeletingConv(null);
   };
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || !activeConv || !user || isStreaming) return;
-    const userMsg: Message = { role: "user", content: input.trim() };
+  const copyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast({ title: "Copiado! 📋" });
+  };
+
+  const exportConversation = () => {
+    if (messages.length === 0) return;
+    const conv = conversations.find((c) => c.id === activeConv);
+    const text = messages.map((m) => `[${m.role === "user" ? "Você" : "IA"}]\n${m.content}`).join("\n\n---\n\n");
+    const header = `Conversa: ${conv?.title || "Chat"}\nExportado em: ${new Date().toLocaleString("pt-BR")}\n\n${"=".repeat(50)}\n\n`;
+    const blob = new Blob([header + text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `chat-${conv?.title?.replace(/\s+/g, "-") || "export"}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Conversa exportada! 📥" });
+  };
+
+  const buildDocumentContext = useCallback(() => {
+    if (selectedDocs.length === 0) return undefined;
+    const usable = selectedDocs.filter((d) => hasUsableDocContext(d));
+    if (usable.length === 0) return undefined;
+
+    const perDoc = Math.floor(MAX_CONTEXT_CHARS / usable.length);
+    const parts = usable.map((d) =>
+      `[DOCUMENTO: "${d.name}"${d.ticker ? ` (Ticker: ${d.ticker})` : ""}]\n\n${d.extracted_text!.slice(0, perDoc)}`
+    );
+    return parts.join("\n\n---\n\n");
+  }, [selectedDocs, hasUsableDocContext]);
+
+  const sendMessage = async (overrideContent?: string) => {
+    const content = overrideContent || input.trim();
+    if (!content || !activeConv || !user || isStreaming) return;
+    const userMsg: Message = { role: "user", content, created_at: new Date().toISOString() };
     setMessages((prev) => [...prev, userMsg]);
-    setInput("");
+    if (!overrideContent) setInput("");
     setIsStreaming(true);
 
-    await supabase.from("messages").insert({
-      conversation_id: activeConv,
-      role: "user",
-      content: userMsg.content,
-    });
+    await supabase.from("messages").insert({ conversation_id: activeConv, role: "user", content });
 
     if (messages.length === 0) {
-      const title = userMsg.content.slice(0, 60);
+      const title = content.slice(0, 60);
       await supabase.from("conversations").update({ title }).eq("id", activeConv);
       setConversations((prev) => prev.map((c) => (c.id === activeConv ? { ...c, title } : c)));
     }
@@ -208,22 +289,7 @@ export default function Chat() {
     let assistantContent = "";
     try {
       const allMessages = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
-      
-      // Build document context to send to the edge function
-      let documentContext: string | undefined;
-      if (selectedDoc) {
-        if (!hasUsableDocContext(selectedDoc)) {
-          toast({
-            title: "Documento sem texto legível",
-            description: "Reanalise o arquivo ou use Editar para colar o texto do PDF antes de perguntar no chat.",
-            variant: "destructive",
-          });
-          setIsStreaming(false);
-          return;
-        }
-
-        documentContext = `[DOCUMENTO SELECIONADO: "${selectedDoc.name}"${selectedDoc.ticker ? ` (Ticker: ${selectedDoc.ticker})` : ""}]\n\n${selectedDoc.extracted_text!.slice(0, 12000)}`;
-      }
+      const documentContext = buildDocumentContext();
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -234,16 +300,8 @@ export default function Chat() {
         body: JSON.stringify({ messages: allMessages, documentContext }),
       });
 
-      if (resp.status === 429) {
-        toast({ title: "Limite atingido", description: "Tente novamente em alguns instantes.", variant: "destructive" });
-        setIsStreaming(false);
-        return;
-      }
-      if (resp.status === 402) {
-        toast({ title: "Créditos insuficientes", description: "Adicione créditos ao workspace.", variant: "destructive" });
-        setIsStreaming(false);
-        return;
-      }
+      if (resp.status === 429) { toast({ title: "Limite atingido", description: "Tente novamente em alguns instantes.", variant: "destructive" }); setIsStreaming(false); return; }
+      if (resp.status === 402) { toast({ title: "Créditos insuficientes", variant: "destructive" }); setIsStreaming(false); return; }
       if (!resp.ok || !resp.body) throw new Error("Falha na conexão com IA");
 
       const reader = resp.body.getReader();
@@ -254,7 +312,6 @@ export default function Chat() {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-
         let newlineIndex: number;
         while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
           let line = buffer.slice(0, newlineIndex);
@@ -265,30 +322,22 @@ export default function Chat() {
           if (jsonStr === "[DONE]") break;
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantContent += content;
+            const c = parsed.choices?.[0]?.delta?.content;
+            if (c) {
+              assistantContent += c;
               setMessages((prev) => {
                 const last = prev[prev.length - 1];
-                if (last?.role === "assistant" && !last.id) {
+                if (last?.role === "assistant" && !last.id)
                   return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
-                }
-                return [...prev, { role: "assistant", content: assistantContent }];
+                return [...prev, { role: "assistant", content: assistantContent, created_at: new Date().toISOString() }];
               });
             }
-          } catch {
-            buffer = line + "\n" + buffer;
-            break;
-          }
+          } catch { buffer = line + "\n" + buffer; break; }
         }
       }
 
       if (assistantContent) {
-        await supabase.from("messages").insert({
-          conversation_id: activeConv,
-          role: "assistant",
-          content: assistantContent,
-        });
+        await supabase.from("messages").insert({ conversation_id: activeConv, role: "assistant", content: assistantContent });
       }
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
@@ -296,93 +345,216 @@ export default function Chat() {
     setIsStreaming(false);
   };
 
-  return (
-    <div className="flex gap-4 h-[calc(100vh-8rem)]">
-      {/* Sidebar conversations */}
-      <div className="w-64 shrink-0 hidden lg:flex flex-col gap-2">
-        <div className="flex gap-2">
-          <Button onClick={createConversation} className="flex-1 gap-2">
-            <Plus className="h-4 w-4" /> Nova conversa
-          </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon" title="Glossário Financeiro">
-                <BookOpen className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="font-display flex items-center gap-2">📖 Glossário Financeiro</DialogTitle>
-                <DialogDescription>Os 10 termos mais importantes usados no app</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3 mt-2">
-                {GLOSSARY.map((item) => (
-                  <div key={item.term} className="rounded-lg bg-muted/50 p-3">
-                    <p className="font-medium text-sm">{item.term}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="space-y-1 pr-2">
-            {loadingConvs ? (
-              [1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)
-            ) : (
-              conversations.map((conv) => (
-                <div key={conv.id} className="group relative">
-                  {renamingId === conv.id ? (
-                    <div className="flex items-center gap-1 px-1">
-                      <Input
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleRenameConv(conv.id);
-                          if (e.key === "Escape") setRenamingId(null);
-                        }}
-                        className="h-8 text-sm"
-                        autoFocus
-                      />
-                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRenameConv(conv.id)}>
-                        <Check className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setRenamingId(null)}>
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => loadMessages(conv.id)}
-                      onDoubleClick={() => { setRenamingId(conv.id); setRenameValue(conv.title); }}
-                      className={`w-full text-left px-3 py-2 rounded-md text-sm truncate transition-colors pr-14 ${
-                        activeConv === conv.id ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"
-                      }`}
-                      title="Duplo clique para renomear"
-                    >
-                      <MessageSquare className="h-3 w-3 inline mr-2" />
-                      {conv.title}
-                    </button>
-                  )}
-                  {renamingId !== conv.id && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
-                      onClick={(e) => { e.stopPropagation(); setDeletingConv(conv); }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
+  const regenerateLastResponse = async () => {
+    // Find last user message
+    const lastUserIdx = [...messages].reverse().findIndex((m) => m.role === "user");
+    if (lastUserIdx === -1) return;
+    const lastUserMsg = messages[messages.length - 1 - lastUserIdx];
+
+    // Remove last assistant message from DB and state
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === "assistant" && lastMsg.id) {
+      await supabase.from("messages").delete().eq("id", lastMsg.id);
+    }
+    setMessages((prev) => prev.filter((_, i) => i !== prev.length - 1));
+
+    // Re-send
+    await sendMessage(lastUserMsg.content);
+  };
+
+  const toggleDocSelection = (docId: string) => {
+    setSelectedDocIds((prev) =>
+      prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
+    );
+  };
+
+  // Sidebar content (reused for desktop and mobile drawer)
+  const sidebarContent = (
+    <div className="flex flex-col gap-2 h-full">
+      <div className="flex gap-2">
+        <Button onClick={createConversation} className="flex-1 gap-2" size={isMobile ? "default" : "default"}>
+          <Plus className="h-4 w-4" /> Nova conversa
+        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="icon" title="Glossário Financeiro">
+              <BookOpen className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-display flex items-center gap-2">📖 Glossário Financeiro</DialogTitle>
+              <DialogDescription>Os 10 termos mais importantes</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              {GLOSSARY.map((item) => (
+                <div key={item.term} className="rounded-lg bg-muted/50 p-3">
+                  <p className="font-medium text-sm">{item.term}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
                 </div>
-              ))
-            )}
-          </div>
-        </ScrollArea>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Delete conversation dialog */}
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input
+          placeholder="Buscar conversas..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-8 text-xs pl-8"
+        />
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="space-y-1 pr-2">
+          {loadingConvs ? (
+            [1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)
+          ) : filteredConversations.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">
+              {searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}
+            </p>
+          ) : (
+            filteredConversations.map((conv) => (
+              <div key={conv.id} className="group relative">
+                {renamingId === conv.id ? (
+                  <div className="flex items-center gap-1 px-1">
+                    <Input
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleRenameConv(conv.id);
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      className="h-8 text-sm"
+                      autoFocus
+                    />
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRenameConv(conv.id)}>
+                      <Check className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setRenamingId(null)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => loadMessages(conv.id)}
+                    onDoubleClick={() => { setRenamingId(conv.id); setRenameValue(conv.title); }}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm truncate transition-colors pr-14 ${
+                      activeConv === conv.id ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"
+                    }`}
+                    title="Duplo clique para renomear"
+                  >
+                    <MessageSquare className="h-3 w-3 inline mr-2" />
+                    {conv.title}
+                  </button>
+                )}
+                {renamingId !== conv.id && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                    onClick={(e) => { e.stopPropagation(); setDeletingConv(conv); }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+
+  // Date separator logic
+  const renderMessagesWithDateSeparators = () => {
+    const elements: React.ReactNode[] = [];
+    let lastDateLabel = "";
+
+    messages.forEach((msg, i) => {
+      const dateLabel = msg.created_at ? getDateLabel(msg.created_at) : "";
+      if (dateLabel && dateLabel !== lastDateLabel) {
+        lastDateLabel = dateLabel;
+        elements.push(
+          <div key={`sep-${i}`} className="flex items-center gap-3 py-3">
+            <div className="flex-1 h-px bg-border/50" />
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{dateLabel}</span>
+            <div className="flex-1 h-px bg-border/50" />
+          </div>
+        );
+      }
+
+      const isLastAssistant = msg.role === "assistant" && (i === messages.length - 1 || messages[i + 1]?.role === "user");
+
+      elements.push(
+        <div key={i} className={`group/msg flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+          {msg.role === "assistant" && (
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+              <Bot className="h-4 w-4 text-primary" />
+            </div>
+          )}
+          <div className="relative max-w-[80%]">
+            <div className={`rounded-xl px-4 py-3 ${
+              msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+            }`}>
+              {msg.role === "assistant" ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm">{msg.content}</p>
+              )}
+            </div>
+            {/* Copy button on hover for assistant messages */}
+            {msg.role === "assistant" && msg.content && (
+              <div className="absolute -bottom-3 right-2 opacity-0 group-hover/msg:opacity-100 transition-opacity flex gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6 bg-background shadow-sm"
+                  onClick={() => copyMessage(msg.content)}
+                  title="Copiar"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+                {isLastAssistant && !isStreaming && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-6 w-6 bg-background shadow-sm"
+                    onClick={regenerateLastResponse}
+                    title="Regenerar"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          {msg.role === "user" && (
+            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
+              <User className="h-4 w-4 text-secondary-foreground" />
+            </div>
+          )}
+        </div>
+      );
+    });
+
+    return elements;
+  };
+
+  return (
+    <div className="flex gap-4 h-[calc(100vh-8rem)]">
+      {/* Desktop sidebar */}
+      <div className="w-64 shrink-0 hidden lg:flex flex-col gap-2">
+        {sidebarContent}
+      </div>
+
+      {/* Delete dialog */}
       <AlertDialog open={!!deletingConv} onOpenChange={(open) => !open && setDeletingConv(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -409,6 +581,20 @@ export default function Chat() {
           {!activeConv ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center space-y-6 max-w-lg">
+                {/* Mobile hamburger */}
+                {isMobile && (
+                  <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+                    <DrawerTrigger asChild>
+                      <Button variant="outline" size="icon" className="absolute top-4 left-4">
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </DrawerTrigger>
+                    <DrawerContent className="h-[80vh] px-4 pb-4">
+                      {sidebarContent}
+                    </DrawerContent>
+                  </Drawer>
+                )}
+
                 <Bot className="h-16 w-16 mx-auto text-primary/50" />
                 <h2 className="font-display text-xl font-semibold">FinSight AI Chat</h2>
                 <p className="text-muted-foreground">
@@ -430,106 +616,126 @@ export default function Chat() {
                       <Bot className="h-3 w-3 text-primary" />
                     </div>
                     <div className="bg-muted rounded-xl px-3 py-2 text-sm max-w-[75%] text-muted-foreground">
-                      O principal risco é a alta dependência do segmento de data centers, que representa 83% da receita...
+                      O principal risco é a alta dependência do segmento de data centers...
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2 justify-center">
+                <div className="flex gap-2 justify-center flex-wrap">
                   <Button onClick={createConversation} className="gap-2">
                     <Plus className="h-4 w-4" /> Nova conversa
                   </Button>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="gap-2 lg:hidden">
-                        <BookOpen className="h-4 w-4" /> Glossário
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle className="font-display flex items-center gap-2">📖 Glossário Financeiro</DialogTitle>
-                        <DialogDescription>Os 10 termos mais importantes usados no app</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-3 mt-2">
-                        {GLOSSARY.map((item) => (
-                          <div key={item.term} className="rounded-lg bg-muted/50 p-3">
-                            <p className="font-medium text-sm">{item.term}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
                 </div>
               </div>
             </div>
           ) : (
             <>
-              {/* Document selector bar */}
-              <div className="flex items-center gap-2 pb-3 mb-1 border-b border-border/50">
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                <Select
-                  value={selectedDocId || "none"}
-                  onValueChange={(v) => setSelectedDocId(v === "none" ? null : v)}
-                >
-                  <SelectTrigger className="h-8 text-xs flex-1 max-w-sm">
-                    <SelectValue placeholder="Nenhum documento selecionado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">
-                      <span className="text-muted-foreground">Sem documento (conversa livre)</span>
-                    </SelectItem>
-                    {documents.map((doc) => (
-                      <SelectItem key={doc.id} value={doc.id}>
-                        <span className="flex items-center gap-2">
-                          {doc.name}
-                          {doc.ticker && (
-                            <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                              {doc.ticker}
-                            </span>
-                          )}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedDoc && (
-                  <Badge variant="outline" className="text-[10px] shrink-0 gap-1 border-primary/30 text-primary">
-                    <FileText className="h-3 w-3" />
-                    Contexto ativo
-                  </Badge>
+              {/* Top bar: mobile drawer + export + doc selector */}
+              <div className="flex items-center gap-2 pb-3 mb-1 border-b border-border/50 flex-wrap">
+                {isMobile && (
+                  <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+                    <DrawerTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                        <Menu className="h-4 w-4" />
+                      </Button>
+                    </DrawerTrigger>
+                    <DrawerContent className="h-[80vh] px-4 pb-4">
+                      {sidebarContent}
+                    </DrawerContent>
+                  </Drawer>
+                )}
+
+                {/* Multi-document selector */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 text-xs h-8">
+                      <FileText className="h-3.5 w-3.5" />
+                      {selectedDocIds.length === 0
+                        ? "Selecionar documentos"
+                        : `${selectedDocIds.length} doc${selectedDocIds.length > 1 ? "s" : ""}`}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-3" align="start">
+                    <p className="text-xs font-medium mb-2 text-muted-foreground">Selecione documentos como contexto:</p>
+                    <ScrollArea className="max-h-48">
+                      <div className="space-y-1">
+                        {documents.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-2">Nenhum documento analisado</p>
+                        ) : (
+                          documents.map((doc) => (
+                            <label
+                              key={doc.id}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm"
+                            >
+                              <Checkbox
+                                checked={selectedDocIds.includes(doc.id)}
+                                onCheckedChange={() => toggleDocSelection(doc.id)}
+                              />
+                              <span className="truncate flex-1">{doc.name}</span>
+                              {doc.ticker && (
+                                <span className="text-[10px] font-mono bg-primary/10 text-primary px-1 rounded shrink-0">
+                                  {doc.ticker}
+                                </span>
+                              )}
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                    {selectedDocIds.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full mt-2 text-xs h-7"
+                        onClick={() => setSelectedDocIds([])}
+                      >
+                        Limpar seleção
+                      </Button>
+                    )}
+                  </PopoverContent>
+                </Popover>
+
+                {/* Token counter */}
+                {selectedDocIds.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {truncatedContextChars.toLocaleString()} / {MAX_CONTEXT_CHARS.toLocaleString()} chars
+                  </span>
+                )}
+
+                <div className="flex-1" />
+
+                {/* Export */}
+                {messages.length > 0 && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={exportConversation} title="Exportar conversa">
+                    <Download className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
 
+              {/* Context banner */}
+              {selectedDocs.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap px-3 py-2 mb-2 rounded-lg bg-primary/5 border border-primary/20">
+                  <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="text-xs text-primary font-medium">Analisando:</span>
+                  {selectedDocs.map((doc) => (
+                    <Badge
+                      key={doc.id}
+                      variant="outline"
+                      className="text-[10px] gap-1 border-primary/30 text-primary cursor-pointer hover:bg-primary/10"
+                    >
+                      📄 {doc.ticker || doc.name.slice(0, 20)}
+                      <X
+                        className="h-2.5 w-2.5 ml-0.5"
+                        onClick={() => toggleDocSelection(doc.id)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
                 <div className="space-y-4 pb-4">
-                  {messages.map((msg, i) => (
-                    <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      {msg.role === "assistant" && (
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                          <Bot className="h-4 w-4 text-primary" />
-                        </div>
-                      )}
-                      <div className={`max-w-[80%] rounded-xl px-4 py-3 ${
-                        msg.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      }`}>
-                        {msg.role === "assistant" ? (
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown>{msg.content}</ReactMarkdown>
-                          </div>
-                        ) : (
-                          <p className="text-sm">{msg.content}</p>
-                        )}
-                      </div>
-                      {msg.role === "user" && (
-                        <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0 mt-1">
-                          <User className="h-4 w-4 text-secondary-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  {renderMessagesWithDateSeparators()}
                   {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
                     <div className="flex gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -547,22 +753,11 @@ export default function Chat() {
                 </div>
               </ScrollArea>
 
+              {/* Dynamic suggestions */}
               {messages.length === 0 && !isStreaming && (
                 <div className="flex flex-wrap gap-2 pb-2">
-                  {[
-                    "Qual o maior risco desse documento?",
-                    "Como estão as margens da empresa?",
-                    "Vale a pena investir?",
-                    "Quais são os red flags?",
-                    "Resuma os principais números",
-                  ].map((q) => (
-                    <Button
-                      key={q}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                      onClick={() => { setInput(q); }}
-                    >
+                  {suggestions.map((q) => (
+                    <Button key={q} variant="outline" size="sm" className="text-xs" onClick={() => setInput(q)}>
                       {q}
                     </Button>
                   ))}
@@ -571,13 +766,17 @@ export default function Chat() {
 
               <div className="flex gap-2 pt-4 border-t border-border/50">
                 <Input
-                  placeholder={selectedDoc ? `Pergunte sobre "${selectedDoc.name}"...` : "Pergunte sobre seus documentos financeiros..."}
+                  placeholder={
+                    selectedDocs.length > 0
+                      ? `Pergunte sobre ${selectedDocs.length} documento${selectedDocs.length > 1 ? "s" : ""}...`
+                      : "Pergunte sobre seus documentos financeiros..."
+                  }
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
                   disabled={isStreaming}
                 />
-                <Button onClick={sendMessage} disabled={isStreaming || !input.trim()} size="icon">
+                <Button onClick={() => sendMessage()} disabled={isStreaming || !input.trim()} size="icon">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
