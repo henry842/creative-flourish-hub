@@ -43,6 +43,7 @@ export default function Dashboard() {
       supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
       supabase.from("watchlist").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("health_scores").select("ticker, overall_score, sentiment, created_at").eq("user_id", user.id).not("ticker", "is", null).order("created_at", { ascending: false }),
+      supabase.from("daily_briefs").select("content, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
     ]);
 
     const sentiments = sentRes.data || [];
