@@ -440,11 +440,11 @@ export default function Chat() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center">
                     <button
                       onClick={() => loadMessages(conv.id)}
                       onDoubleClick={() => { setRenamingId(conv.id); setRenameValue(conv.title); }}
-                      className={`flex-1 text-left px-3 py-2 rounded-md text-sm truncate transition-colors ${
+                      className={`flex-1 min-w-0 text-left px-3 py-2 rounded-md text-sm truncate transition-colors ${
                         activeConv === conv.id ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"
                       }`}
                       title="Duplo clique para renomear"
@@ -452,14 +452,13 @@ export default function Chat() {
                       <MessageSquare className="h-3 w-3 inline mr-2" />
                       {conv.title}
                     </button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                    <button
+                      className="flex-none w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
                       onClick={(e) => { e.stopPropagation(); setDeletingConv(conv); }}
+                      title="Deletar conversa"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 )}
               </div>
