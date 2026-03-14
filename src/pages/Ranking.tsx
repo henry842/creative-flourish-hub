@@ -505,10 +505,10 @@ ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentim
                           <div key={key}>
                             <div className="flex justify-between text-xs mb-1">
                               <span className="text-muted-foreground">{label}</span>
-                              <span className={`font-medium ${scoreColor(company[key])}`}>{company[key]}</span>
+                              <span className={`font-medium ${INVERTED_KEYS.has(key) ? scoreColorInv(company[key]) : scoreColor(company[key])}`}>{company[key]}</span>
                             </div>
                             <div className="h-2 rounded-full bg-muted overflow-hidden">
-                              <div className={`h-full rounded-full ${scoreBg(company[key])}`} style={{ width: `${company[key]}%` }} />
+                              <div className={`h-full rounded-full ${INVERTED_KEYS.has(key) ? scoreBgInv(company[key]) : scoreBg(company[key])}`} style={{ width: `${company[key]}%` }} />
                             </div>
                           </div>
                         ))}
