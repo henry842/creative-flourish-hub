@@ -703,6 +703,20 @@ export default function Chat() {
 
                 <div className="flex-1" />
 
+                {/* Delete conversation */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    const conv = conversations.find((c) => c.id === activeConv);
+                    if (conv) setDeletingConv(conv);
+                  }}
+                  title="Deletar conversa"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+
                 {/* Export */}
                 {messages.length > 0 && (
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={exportConversation} title="Exportar conversa">
