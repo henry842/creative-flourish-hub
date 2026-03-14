@@ -655,6 +655,10 @@ export default function Dashboard() {
         </Card>
       </div>
 
+
+      {/* Portfolio Charts 2x2 */}
+      <PortfolioCharts scores={allScores} assets={allAssets} latestScores={latestByAssetId} />
+
       {/* Activity Timeline + Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Activity Timeline */}
