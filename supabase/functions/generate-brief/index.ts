@@ -173,7 +173,8 @@ async function generateBriefForUser(
         const newsData = await newsResponse.json();
         newsContent = newsData.choices?.[0]?.message?.content || "";
       } else {
-        console.error("News search failed:", newsResponse.status);
+        const errorBody = await newsResponse.text();
+        console.error("News search failed:", newsResponse.status, errorBody);
         newsContent = "⚠️ Não foi possível buscar notícias em tempo real hoje.";
       }
     } catch (err) {
