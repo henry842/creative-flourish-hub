@@ -64,13 +64,15 @@ export default function Sentiment() {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
   const [selectedTickers, setSelectedTickers] = useState<Set<string>>(new Set());
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const fetchData = () => {
     if (!user) return;
     Promise.all([
-      supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("health_scores").select("*").eq("user_id", user.id).not("ticker", "is", null).order("created_at", { ascending: true }),
-      supabase.from("watchlist").select("ticker").eq("user_id", user.id),
+      supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100),
+      supabase.from("health_scores").select("*").eq("user_id", user.id).not("ticker", "is", null).order("created_at", { ascending: true }).limit(100),
+      supabase.from("watchlist").select("ticker").eq("user_id", user.id).limit(100),
     ]).then(([sentRes, scoresRes, watchRes]) => {
       setAnalyses(sentRes.data || []);
       const allScores = (scoresRes.data || []) as HealthScore[];
@@ -86,6 +88,10 @@ export default function Sentiment() {
       });
       setScoreHistory(history);
       setWatchlistTickers(new Set((watchRes.data || []).map((w: any) => w.ticker)));
+      setLoading(false);
+    }).catch((err) => {
+      console.error("Failed to fetch sentiment data:", err);
+      toast({ title: "Erro ao carregar dados", description: "Tente novamente.", variant: "destructive" });
       setLoading(false);
     });
   };
@@ -399,25 +405,27 @@ export default function Sentiment() {
           {sentimentEvolution.length > 1 && (
             <Card className="glass">
               <CardHeader className="pb-2">
-                <CardTitle className="font-display text-lg">Evolução do Sentimento</CardTitle>
-                <p className="text-xs text-muted-foreground">% de análises bullish vs bearish ao longo do tempo</p>
+                <CardTitle className="font-display text-lg" id="evolution-chart-title">Evolução do Sentimento</CardTitle>
+                <p className="text-xs text-muted-foreground" id="evolution-chart-desc">Percentual de análises bullish vs bearish ao longo do tempo</p>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <AreaChart data={sentimentEvolution}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" fontSize={11} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis domain={[0, 100]} fontSize={11} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${v}%`} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)", fontSize: 12 }}
-                      formatter={(value: number, name: string) => [`${value}%`, name === "bullish" ? "Bullish" : name === "bearish" ? "Bearish" : "Neutro"]}
-                    />
-                    <Legend formatter={(value) => value === "bullish" ? "Bullish" : value === "bearish" ? "Bearish" : "Neutro"} />
-                    <Area type="monotone" dataKey="bullish" stackId="1" stroke="hsl(var(--bullish))" fill="hsl(var(--bullish))" fillOpacity={0.3} />
-                    <Area type="monotone" dataKey="neutral" stackId="1" stroke="hsl(var(--neutral))" fill="hsl(var(--neutral))" fillOpacity={0.2} />
-                    <Area type="monotone" dataKey="bearish" stackId="1" stroke="hsl(var(--bearish))" fill="hsl(var(--bearish))" fillOpacity={0.3} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div role="img" aria-labelledby="evolution-chart-title" aria-describedby="evolution-chart-desc">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <AreaChart data={sentimentEvolution}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" fontSize={11} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis domain={[0, 100]} fontSize={11} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${v}%`} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)", fontSize: 12 }}
+                        formatter={(value: number, name: string) => [`${value}%`, name === "bullish" ? "Bullish" : name === "bearish" ? "Bearish" : "Neutro"]}
+                      />
+                      <Legend formatter={(value) => value === "bullish" ? "Bullish" : value === "bearish" ? "Bearish" : "Neutro"} />
+                      <Area type="monotone" dataKey="bullish" stackId="1" stroke="hsl(var(--bullish))" fill="hsl(var(--bullish))" fillOpacity={0.3} />
+                      <Area type="monotone" dataKey="neutral" stackId="1" stroke="hsl(var(--neutral))" fill="hsl(var(--neutral))" fillOpacity={0.2} />
+                      <Area type="monotone" dataKey="bearish" stackId="1" stroke="hsl(var(--bearish))" fill="hsl(var(--bearish))" fillOpacity={0.3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -580,155 +588,212 @@ export default function Sentiment() {
             })}
           </div>
 
-          {/* History table */}
+          {/* History table with pagination */}
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="font-display text-xl font-semibold">Histórico</h2>
+              <h2 className="font-display text-xl font-semibold" id="history-heading">Histórico</h2>
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Period filter */}
-                <div className="flex gap-1">
+                <div className="flex gap-1" role="group" aria-label="Filtro por período">
                   {periodButtons.map((f) => (
-                    <Button key={f.key} variant={periodFilter === f.key ? "secondary" : "ghost"} size="sm" onClick={() => setPeriodFilter(f.key)} className="text-[10px] h-7 px-2">
+                    <Button key={f.key} variant={periodFilter === f.key ? "secondary" : "ghost"} size="sm" onClick={() => { setPeriodFilter(f.key); setCurrentPage(1); }} className="text-[10px] h-7 px-2" aria-pressed={periodFilter === f.key}>
                       {f.label}
                     </Button>
                   ))}
                 </div>
-                <div className="w-px h-5 bg-border" />
+                <div className="w-px h-5 bg-border" aria-hidden="true" />
                 {/* Sentiment filter */}
-                <div className="flex gap-1">
+                <div className="flex gap-1" role="group" aria-label="Filtro por sentimento">
                   {filterButtons.map((f) => (
-                    <Button key={f.key} variant={sentimentFilter === f.key ? "default" : "outline"} size="sm" onClick={() => setSentimentFilter(f.key)} className="text-xs">
+                    <Button key={f.key} variant={sentimentFilter === f.key ? "default" : "outline"} size="sm" onClick={() => { setSentimentFilter(f.key); setCurrentPage(1); }} className="text-xs" aria-pressed={sentimentFilter === f.key}>
                       {f.label}
                     </Button>
                   ))}
                 </div>
-                <div className="w-px h-5 bg-border" />
+                <div className="w-px h-5 bg-border" aria-hidden="true" />
                 {/* Export */}
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={exportCSV}>
-                  <Download className="h-3.5 w-3.5" /> Exportar CSV
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={exportCSV} aria-label="Exportar dados como CSV">
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" /> Exportar CSV
                 </Button>
               </div>
             </div>
 
-            <Card className="glass overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-8"></TableHead>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Sentimento</TableHead>
-                    <TableHead>Confiança</TableHead>
-                    <TableHead className="hidden md:table-cell">Resumo</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAnalyses.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        Nenhuma análise com esse filtro
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredAnalyses.map((a, idx) => {
-                      const cfg2 = sentimentConfig[a.sentiment as keyof typeof sentimentConfig] || sentimentConfig.neutral;
-                      const isExpanded = expandedRow === a.id;
-                      const relatedScore = getHealthScoreForAnalysis(a);
+            {(() => {
+              const totalPages = Math.ceil(filteredAnalyses.length / ITEMS_PER_PAGE);
+              const paginatedAnalyses = filteredAnalyses.slice(
+                (currentPage - 1) * ITEMS_PER_PAGE,
+                currentPage * ITEMS_PER_PAGE
+              );
 
-                      return (
-                        <>
-                          <TableRow
-                            key={a.id}
-                            className={`cursor-pointer transition-colors ${idx % 2 === 1 ? "bg-muted/30" : ""} ${isExpanded ? "bg-primary/5" : ""}`}
-                            onClick={() => setExpandedRow(isExpanded ? null : a.id)}
-                          >
-                            <TableCell className="px-2">
-                              {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {a.ticker || <span className="text-muted-foreground italic">N/A</span>}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={`${cfg2.bg} ${cfg2.color} border-0`}>{cfg2.label}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              {a.confidence ? `${(a.confidence * 100).toFixed(0)}%` : "—"}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell max-w-xs truncate text-sm text-muted-foreground">
-                              {a.summary || "—"}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                              {new Date(a.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                            </TableCell>
-                            <TableCell>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={(e) => e.stopPropagation()}>
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Remover análise?</AlertDialogTitle>
-                                    <AlertDialogDescription>Esta análise de sentimento será removida permanentemente.</AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteAnalysis(a.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remover</AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+              return (
+                <>
+                  <Card className="glass overflow-hidden">
+                    <Table aria-labelledby="history-heading">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-8" aria-label="Expandir"></TableHead>
+                          <TableHead>Empresa</TableHead>
+                          <TableHead>Sentimento</TableHead>
+                          <TableHead>Confiança</TableHead>
+                          <TableHead className="hidden md:table-cell">Resumo</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead className="w-10" aria-label="Ações"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedAnalyses.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              Nenhuma análise com esse filtro
                             </TableCell>
                           </TableRow>
-                          {/* Expanded row */}
-                          {isExpanded && (
-                            <TableRow key={`${a.id}-expanded`} className="bg-muted/20">
-                              <TableCell colSpan={7} className="p-4">
-                                <div className="space-y-3">
-                                  {a.summary && (
-                                    <div>
-                                      <p className="text-xs font-medium text-muted-foreground mb-1">Resumo completo</p>
-                                      <p className="text-sm">{a.summary}</p>
-                                    </div>
-                                  )}
-                                  {relatedScore && (
-                                    <div>
-                                      <p className="text-xs font-medium text-muted-foreground mb-2">Health Score</p>
-                                      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                                        <div className="rounded-lg bg-background p-2.5 text-center">
-                                          <p className="text-2xl font-bold text-primary">{relatedScore.overall_score}</p>
-                                          <p className="text-[10px] text-muted-foreground">Score Geral</p>
-                                        </div>
-                                        {[
-                                          { label: "Crescimento", value: relatedScore.revenue_growth },
-                                          { label: "Margem", value: relatedScore.net_margin },
-                                          { label: "Endivid.", value: relatedScore.debt_level },
-                                          { label: "Qualidade", value: relatedScore.earnings_quality },
-                                          { label: "Reg. Risk", value: relatedScore.regulatory_risk },
-                                        ].map((m) => (
-                                          <div key={m.label} className="rounded-lg bg-background p-2.5 text-center">
-                                            <p className="text-lg font-semibold">{m.value}</p>
-                                            <p className="text-[10px] text-muted-foreground">{m.label}</p>
+                        ) : (
+                          paginatedAnalyses.map((a, idx) => {
+                            const cfg2 = sentimentConfig[a.sentiment as keyof typeof sentimentConfig] || sentimentConfig.neutral;
+                            const isExpanded = expandedRow === a.id;
+                            const relatedScore = getHealthScoreForAnalysis(a);
+
+                            return (
+                              <>
+                                <TableRow
+                                  key={a.id}
+                                  className={`cursor-pointer transition-colors ${idx % 2 === 1 ? "bg-muted/30" : ""} ${isExpanded ? "bg-primary/5" : ""}`}
+                                  onClick={() => setExpandedRow(isExpanded ? null : a.id)}
+                                  tabIndex={0}
+                                  role="button"
+                                  aria-expanded={isExpanded}
+                                  aria-label={`Análise ${a.ticker || "sem ticker"}, sentimento ${cfg2.label}`}
+                                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedRow(isExpanded ? null : a.id); } }}
+                                >
+                                  <TableCell className="px-2">
+                                    {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />}
+                                  </TableCell>
+                                  <TableCell className="font-medium">
+                                    {a.ticker || <span className="text-muted-foreground italic">N/A</span>}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={`${cfg2.bg} ${cfg2.color} border-0`}>{cfg2.label}</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {a.confidence ? `${(a.confidence * 100).toFixed(0)}%` : "—"}
+                                  </TableCell>
+                                  <TableCell className="hidden md:table-cell max-w-xs truncate text-sm text-muted-foreground">
+                                    {a.summary || "—"}
+                                  </TableCell>
+                                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                                    {new Date(a.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                                  </TableCell>
+                                  <TableCell>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={(e) => e.stopPropagation()} aria-label={`Remover análise de ${a.ticker || "sem ticker"}`}>
+                                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Remover análise?</AlertDialogTitle>
+                                          <AlertDialogDescription>Esta análise de sentimento será removida permanentemente.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteAnalysis(a.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remover</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </TableCell>
+                                </TableRow>
+                                {isExpanded && (
+                                  <TableRow key={`${a.id}-expanded`} className="bg-muted/20">
+                                    <TableCell colSpan={7} className="p-4">
+                                      <div className="space-y-3">
+                                        {a.summary && (
+                                          <div>
+                                            <p className="text-xs font-medium text-muted-foreground mb-1">Resumo completo</p>
+                                            <p className="text-sm">{a.summary}</p>
                                           </div>
-                                        ))}
+                                        )}
+                                        {relatedScore && (
+                                          <div>
+                                            <p className="text-xs font-medium text-muted-foreground mb-2">Health Score</p>
+                                            <div className="grid grid-cols-2 md:grid-cols-6 gap-3" role="group" aria-label="Métricas do Health Score">
+                                              <div className="rounded-lg bg-background p-2.5 text-center">
+                                                <p className="text-2xl font-bold text-primary">{relatedScore.overall_score}</p>
+                                                <p className="text-[10px] text-muted-foreground">Score Geral</p>
+                                              </div>
+                                              {[
+                                                { label: "Crescimento", value: relatedScore.revenue_growth },
+                                                { label: "Margem", value: relatedScore.net_margin },
+                                                { label: "Endivid.", value: relatedScore.debt_level },
+                                                { label: "Qualidade", value: relatedScore.earnings_quality },
+                                                { label: "Reg. Risk", value: relatedScore.regulatory_risk },
+                                              ].map((m) => (
+                                                <div key={m.label} className="rounded-lg bg-background p-2.5 text-center">
+                                                  <p className="text-lg font-semibold">{m.value}</p>
+                                                  <p className="text-[10px] text-muted-foreground">{m.label}</p>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {!a.summary && !relatedScore && (
+                                          <p className="text-sm text-muted-foreground">Sem dados adicionais disponíveis.</p>
+                                        )}
                                       </div>
-                                    </div>
-                                  )}
-                                  {!a.summary && !relatedScore && (
-                                    <p className="text-sm text-muted-foreground">Sem dados adicionais disponíveis.</p>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </>
-                      );
-                    })
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </Card>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between" role="navigation" aria-label="Paginação do histórico">
+                      <p className="text-xs text-muted-foreground">
+                        {filteredAnalyses.length} resultado{filteredAnalyses.length !== 1 ? "s" : ""} · Página {currentPage} de {totalPages}
+                      </p>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline" size="sm" disabled={currentPage === 1}
+                          onClick={() => setCurrentPage((p) => p - 1)}
+                          aria-label="Página anterior"
+                        >
+                          Anterior
+                        </Button>
+                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                          const page = currentPage <= 3 ? i + 1 : currentPage - 2 + i;
+                          if (page > totalPages || page < 1) return null;
+                          return (
+                            <Button
+                              key={page}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm" className="w-8 h-8 p-0"
+                              onClick={() => setCurrentPage(page)}
+                              aria-label={`Página ${page}`}
+                              aria-current={currentPage === page ? "page" : undefined}
+                            >
+                              {page}
+                            </Button>
+                          );
+                        })}
+                        <Button
+                          variant="outline" size="sm" disabled={currentPage === totalPages}
+                          onClick={() => setCurrentPage((p) => p + 1)}
+                          aria-label="Próxima página"
+                        >
+                          Próxima
+                        </Button>
+                      </div>
+                    </div>
                   )}
-                </TableBody>
-              </Table>
-            </Card>
+                </>
+              );
+            })()}
           </div>
         </>
       )}
