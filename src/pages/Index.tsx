@@ -17,6 +17,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import { toast } from "@/hooks/use-toast";
+import { PortfolioCharts } from "@/components/PortfolioCharts";
 
 interface Stats {
   totalDocs: number;
@@ -68,6 +69,9 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [portfolioHealth, setPortfolioHealth] = useState<PortfolioHealth | null>(null);
   const [nextBriefTime, setNextBriefTime] = useState<string | null>(null);
+  const [allScores, setAllScores] = useState<any[]>([]);
+  const [allAssets, setAllAssets] = useState<any[]>([]);
+  const [latestByAssetId, setLatestByAssetId] = useState<Record<string, { score: number; sentiment: string }>>({});
   const [loading, setLoading] = useState(true);
   const [newTicker, setNewTicker] = useState("");
   const [addingTicker, setAddingTicker] = useState(false);
@@ -90,7 +94,7 @@ export default function Dashboard() {
       supabase.from("watchlist").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("health_scores").select("ticker, overall_score, sentiment, created_at, asset_id").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("daily_briefs").select("content, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
-      supabase.from("assets").select("id, name, ticker").eq("user_id", user.id).order("name"),
+      supabase.from("assets").select("id, name, ticker, asset_type").eq("user_id", user.id).order("name"),
       // Month counts
       supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", startOfMonth),
       supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", startOfMonth),
@@ -135,21 +139,25 @@ export default function Dashboard() {
     setWatchlist(wl);
 
     // Ranked assets (top 3 by health score)
-    const latestByAssetId: Record<string, { score: number; sentiment: string }> = {};
+    const latestByAssetIdMap: Record<string, { score: number; sentiment: string }> = {};
     scores.forEach((s) => {
-      if (s.asset_id && !latestByAssetId[s.asset_id]) {
-        latestByAssetId[s.asset_id] = { score: s.overall_score, sentiment: s.sentiment || "neutral" };
+      if (s.asset_id && !latestByAssetIdMap[s.asset_id]) {
+        latestByAssetIdMap[s.asset_id] = { score: s.overall_score, sentiment: s.sentiment || "neutral" };
       }
     });
 
+    setAllScores(scores);
+    setAllAssets(assets);
+    setLatestByAssetId(latestByAssetIdMap);
+
     const ranked = assets
-      .filter((a) => latestByAssetId[a.id])
+      .filter((a) => latestByAssetIdMap[a.id])
       .map((a) => ({
         id: a.id,
         name: a.name,
         ticker: a.ticker,
-        score: latestByAssetId[a.id].score,
-        sentiment: latestByAssetId[a.id].sentiment,
+        score: latestByAssetIdMap[a.id].score,
+        sentiment: latestByAssetIdMap[a.id].sentiment,
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
@@ -157,8 +165,8 @@ export default function Dashboard() {
 
     // Portfolio health
     const assetScores = assets
-      .filter((a) => latestByAssetId[a.id])
-      .map((a) => latestByAssetId[a.id].score);
+      .filter((a) => latestByAssetIdMap[a.id])
+      .map((a) => latestByAssetIdMap[a.id].score);
 
     if (assetScores.length > 0) {
       const avgScore = Math.round(assetScores.reduce((a, b) => a + b, 0) / assetScores.length);
@@ -646,6 +654,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+
+      {/* Portfolio Charts 2x2 */}
+      <PortfolioCharts scores={allScores} assets={allAssets} latestScores={latestByAssetId} />
 
       {/* Activity Timeline + Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
