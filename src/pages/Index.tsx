@@ -94,7 +94,7 @@ export default function Dashboard() {
       supabase.from("watchlist").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("health_scores").select("ticker, overall_score, sentiment, created_at, asset_id").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("daily_briefs").select("content, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
-      supabase.from("assets").select("id, name, ticker").eq("user_id", user.id).order("name"),
+      supabase.from("assets").select("id, name, ticker, asset_type").eq("user_id", user.id).order("name"),
       // Month counts
       supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", startOfMonth),
       supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", startOfMonth),
