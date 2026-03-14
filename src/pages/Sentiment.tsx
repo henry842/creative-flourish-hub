@@ -64,13 +64,15 @@ export default function Sentiment() {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
   const [selectedTickers, setSelectedTickers] = useState<Set<string>>(new Set());
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const fetchData = () => {
     if (!user) return;
     Promise.all([
-      supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("health_scores").select("*").eq("user_id", user.id).not("ticker", "is", null).order("created_at", { ascending: true }),
-      supabase.from("watchlist").select("ticker").eq("user_id", user.id),
+      supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100),
+      supabase.from("health_scores").select("*").eq("user_id", user.id).not("ticker", "is", null).order("created_at", { ascending: true }).limit(100),
+      supabase.from("watchlist").select("ticker").eq("user_id", user.id).limit(100),
     ]).then(([sentRes, scoresRes, watchRes]) => {
       setAnalyses(sentRes.data || []);
       const allScores = (scoresRes.data || []) as HealthScore[];
@@ -86,6 +88,10 @@ export default function Sentiment() {
       });
       setScoreHistory(history);
       setWatchlistTickers(new Set((watchRes.data || []).map((w: any) => w.ticker)));
+      setLoading(false);
+    }).catch((err) => {
+      console.error("Failed to fetch sentiment data:", err);
+      toast({ title: "Erro ao carregar dados", description: "Tente novamente.", variant: "destructive" });
       setLoading(false);
     });
   };
