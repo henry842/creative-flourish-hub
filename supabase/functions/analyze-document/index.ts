@@ -448,31 +448,6 @@ PASSO 4 — REGRAS UNIVERSAIS:
 
     if (!analysis) throw new Error("Could not extract structured data from AI response");
 
-    // Normalize red flags: keep only truly critical items, especially when regulatory risk is low
-    const regulatoryRisk = Number(analysis.regulatory_risk ?? 50);
-    const rawRedFlags: string[] = Array.isArray(analysis.red_flags)
-      ? analysis.red_flags.map((item: unknown) => String(item)).filter(Boolean)
-      : [];
-
-    const lowSeverityPatterns = [
-      /ipca/i,
-      /press[aã]o\s+conjuntural/i,
-      /oscila[cç][aã]o\s+macro/i,
-      /baixo\s+risco\s+regulat[óo]rio/i,
-      /pouco\s+risco\s+regulat[óo]rio/i,
-    ];
-
-    const sanitizedRedFlags = rawRedFlags
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0)
-      .filter((f) => {
-        if (regulatoryRisk > 30) return true;
-        return !lowSeverityPatterns.some((pattern) => pattern.test(f));
-      })
-      .slice(0, 5);
-
-    analysis.red_flags = sanitizedRedFlags;
-
     // Delete old health_scores and sentiment for this document before inserting new ones
     await supabase.from("health_scores").delete().eq("document_id", document_id).eq("user_id", user.id);
     await supabase.from("sentiment_analyses").delete().eq("document_id", document_id).eq("user_id", user.id);
