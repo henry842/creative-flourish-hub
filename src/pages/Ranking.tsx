@@ -516,11 +516,13 @@ ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentim
                             <ShieldAlert className="h-4 w-4 text-bearish" />
                             <span className="text-sm font-medium">Red Flags ({company.red_flags.length})</span>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
+                          <ul className="space-y-1.5">
                             {company.red_flags.map((f, fi) => (
-                              <Badge key={fi} variant="destructive" className="text-xs font-normal">🚩 {f}</Badge>
+                              <li key={fi} className="text-xs text-bearish/80 bg-bearish/10 rounded px-3 py-2 leading-relaxed">
+                                🚩 {f}
+                              </li>
                             ))}
-                          </div>
+                          </ul>
                         </div>
                       )}
 
