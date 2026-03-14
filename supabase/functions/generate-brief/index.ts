@@ -4,8 +4,102 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const NEWS_API_URL = "https://newsapi.org/v2/everything";
+
+async function fetchNews(tickers: string[], newsApiKey: string): Promise<string> {
+  try {
+    const queries = tickers.length > 0
+      ? tickers.slice(0, 5).join(" OR ")
+      : "mercado financeiro Brasil OR Selic OR IFIX OR IPCA";
+
+    const params = new URLSearchParams({
+      q: queries,
+      language: "pt",
+      sortBy: "publishedAt",
+      pageSize: "10",
+      apiKey: newsApiKey,
+    });
+
+    const response = await fetch(`${NEWS_API_URL}?${params}`);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("NewsAPI error:", response.status, errText);
+      return "⚠️ Não foi possível buscar notícias hoje.";
+    }
+
+    const data = await response.json();
+    const articles = data.articles || [];
+
+    if (articles.length === 0) {
+      return "Nenhuma notícia relevante encontrada hoje.";
+    }
+
+    return articles
+      .slice(0, 8)
+      .map((a: any, i: number) => `${i + 1}. **${a.title}** — ${a.source?.name || "Fonte"} (${new Date(a.publishedAt).toLocaleDateString("pt-BR")})\n   ${a.description || ""}`)
+      .join("\n\n");
+  } catch (err) {
+    console.error("NewsAPI fetch error:", err);
+    return "⚠️ Não foi possível buscar notícias hoje.";
+  }
+}
+
+async function callGroq(messages: any[], groqApiKey: string): Promise<string> {
+  const models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
+
+  for (const model of models) {
+    console.log(`Trying Groq model: ${model}`);
+    const res = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${groqApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ model, messages }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || "";
+    }
+
+    const errText = await res.text();
+    console.error(`Groq model ${model} failed (${res.status}):`, errText);
+
+    if (res.status === 429) continue;
+    if (res.status >= 400 && res.status < 500) {
+      throw new Error(`Groq error ${res.status}: ${errText}`);
+    }
+  }
+
+  throw new Error("All Groq models unavailable. Try again later.");
+}
+
+async function incrementUsage(supabase: any, userId: string) {
+  const today = new Date().toISOString().split("T")[0];
+  const { data } = await supabase
+    .from("groq_usage")
+    .select("id, request_count")
+    .eq("user_id", userId)
+    .eq("date", today)
+    .maybeSingle();
+
+  if (data) {
+    await supabase
+      .from("groq_usage")
+      .update({ request_count: data.request_count + 1, updated_at: new Date().toISOString() })
+      .eq("id", data.id);
+  } else {
+    await supabase
+      .from("groq_usage")
+      .insert({ user_id: userId, date: today, request_count: 1 });
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,17 +107,18 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
+
+    const NEWS_API_KEY = Deno.env.get("NEWS_API_KEY");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Determine mode: single user or cron (all active users)
     let userIds: string[] = [];
-    
+
     try {
       const body = await req.json();
       if (body.user_id) {
@@ -34,10 +129,9 @@ serve(async (req) => {
     }
 
     if (userIds.length === 0) {
-      // Cron mode: find all active users whose schedule_time matches current hour
       const now = new Date();
       const currentHour = now.getUTCHours().toString().padStart(2, "0");
-      
+
       const { data: activeBriefs } = await supabase
         .from("scheduled_briefs")
         .select("user_id, schedule_time")
@@ -63,7 +157,8 @@ serve(async (req) => {
 
     for (const userId of userIds) {
       try {
-        const briefContent = await generateBriefForUser(supabase, userId, LOVABLE_API_KEY);
+        await generateBriefForUser(supabase, userId, GROQ_API_KEY, NEWS_API_KEY);
+        await incrementUsage(supabase, userId);
         results.push({ userId, success: true });
         console.log(`Brief generated for user ${userId}`);
       } catch (err) {
@@ -73,7 +168,7 @@ serve(async (req) => {
     }
 
     // Update last_run_at for processed users
-    const successUserIds = results.filter(r => r.success).map(r => r.userId);
+    const successUserIds = results.filter((r) => r.success).map((r) => r.userId);
     if (successUserIds.length > 0) {
       await supabase
         .from("scheduled_briefs")
@@ -96,7 +191,8 @@ serve(async (req) => {
 async function generateBriefForUser(
   supabase: any,
   userId: string,
-  apiKey: string
+  groqApiKey: string,
+  newsApiKey: string | undefined
 ) {
   // 1. Get user's scheduled brief config
   const { data: config } = await supabase
@@ -144,46 +240,15 @@ async function generateBriefForUser(
     }
   }
 
-  // 4. Search real news via Perplexity/Sonar through Lovable AI Gateway
+  // 4. Fetch news via NewsAPI (free, no Lovable credits)
   let newsContent = "";
-  if (config.include_news || config.include_macro) {
-    const tickerList = tickers.length > 0 ? tickers.join(", ") : "mercado financeiro brasileiro";
-    const newsPrompt = `Quais são as principais notícias financeiras do Brasil hoje? Inclua: variação do IFIX, decisão do Banco Central sobre Selic, IPCA mais recente, e notícias sobre os seguintes tickers: ${tickerList}. Responda em português de forma concisa.`;
-
-    try {
-      const newsResponse = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "perplexity/sonar",
-            messages: [
-              { role: "system", content: "Você é um assistente financeiro especializado no mercado brasileiro. Responda de forma concisa e factual." },
-              { role: "user", content: newsPrompt },
-            ],
-          }),
-        }
-      );
-
-      if (newsResponse.ok) {
-        const newsData = await newsResponse.json();
-        newsContent = newsData.choices?.[0]?.message?.content || "";
-      } else {
-        const errorBody = await newsResponse.text();
-        console.error("News search failed:", newsResponse.status, errorBody);
-        newsContent = "⚠️ Não foi possível buscar notícias em tempo real hoje.";
-      }
-    } catch (err) {
-      console.error("News search error:", err);
-      newsContent = "⚠️ Não foi possível buscar notícias em tempo real hoje.";
-    }
+  if ((config.include_news || config.include_macro) && newsApiKey) {
+    newsContent = await fetchNews(tickers, newsApiKey);
+  } else if (config.include_news || config.include_macro) {
+    newsContent = "⚠️ NEWS_API_KEY não configurada. Configure em Configurações para receber notícias.";
   }
 
-  // 5. Generate the final briefing using Gemini Flash
+  // 5. Generate the final briefing using Groq (free)
   const today = new Date().toLocaleDateString("pt-BR", {
     weekday: "long",
     year: "numeric",
@@ -201,48 +266,28 @@ ${assetNames.length > 0 ? assetNames.join("\n") : "Nenhum ativo configurado"}
 DADOS INTERNOS (Health Scores):
 ${healthData || "Nenhum score disponível"}
 
-NOTÍCIAS E DADOS DE MERCADO (fonte: busca em tempo real):
+NOTÍCIAS E DADOS DE MERCADO:
 ${newsContent || "Sem dados de mercado disponíveis"}
 
 INSTRUÇÕES:
 - Formate o briefing em markdown
 - Use emojis para tornar visual (📊 🏦 📈 📰 ⚡ 🔴 🟢 🟡)
 - Comece com "📊 Seu briefing de hoje — ${today}"
-- Seções: Seus Ativos (com scores e sentimento), Mercado Hoje (IFIX, Selic, IPCA), Notícias Relevantes, Ações Recomendadas
+- Seções: Seus Ativos (com scores e sentimento), Mercado Hoje (notícias relevantes), Ações Recomendadas
 - Seja conciso e actionable
 - Se não houver dados para alguma seção, indique isso brevemente
 - Termine com uma recomendação de ação clara`;
 
-  const briefResponse = await fetch(
-    "https://ai.gateway.lovable.dev/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+  const content = await callGroq(
+    [
+      {
+        role: "system",
+        content: "Você é um analista financeiro expert em mercado brasileiro. Gere briefings concisos e actionable.",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: "Você é um analista financeiro expert em mercado brasileiro. Gere briefings concisos e actionable.",
-          },
-          { role: "user", content: briefingPrompt },
-        ],
-      }),
-    }
+      { role: "user", content: briefingPrompt },
+    ],
+    groqApiKey
   );
-
-  if (!briefResponse.ok) {
-    const status = briefResponse.status;
-    if (status === 429) throw new Error("Rate limit exceeded. Try again later.");
-    if (status === 402) throw new Error("Payment required. Add credits to your workspace.");
-    throw new Error(`AI gateway error: ${status}`);
-  }
-
-  const briefData = await briefResponse.json();
-  const content = briefData.choices?.[0]?.message?.content;
 
   if (!content) throw new Error("Empty response from AI");
 

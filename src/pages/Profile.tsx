@@ -1,18 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { UserCircle, Save, KeyRound, Trash2, Sparkles } from "lucide-react";
+import { UserCircle, Save, KeyRound, Trash2, Sparkles, BarChart3, Zap, FileText, Bell, AlertTriangle } from "lucide-react";
 
 const PROMPT_EXAMPLES = [
   "Sou investidor focado em FIIs de papel e tijolo",
@@ -32,9 +33,15 @@ export default function Profile() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [groqUsageToday, setGroqUsageToday] = useState(0);
+  const [groqUsageMonth, setGroqUsageMonth] = useState(0);
+  const [totalAnalyses, setTotalAnalyses] = useState(0);
+  const [totalBriefings, setTotalBriefings] = useState(0);
 
   useEffect(() => {
     if (!user) return;
+
+    // Profile data
     supabase
       .from("profiles")
       .select("display_name, custom_prompt")
@@ -44,7 +51,51 @@ export default function Profile() {
         if (data?.display_name) setDisplayName(data.display_name);
         if ((data as any)?.custom_prompt) setCustomPrompt((data as any).custom_prompt);
       });
+
+    // Usage stats
+    const today = new Date().toISOString().split("T")[0];
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    // Groq usage today
+    supabase
+      .from("groq_usage")
+      .select("request_count")
+      .eq("user_id", user.id)
+      .eq("date", today)
+      .maybeSingle()
+      .then(({ data }) => setGroqUsageToday(data?.request_count || 0));
+
+    // Groq usage this month
+    supabase
+      .from("groq_usage")
+      .select("request_count")
+      .eq("user_id", user.id)
+      .gte("date", monthStart.toISOString().split("T")[0])
+      .then(({ data }) => {
+        const total = (data || []).reduce((sum: number, d: any) => sum + (d.request_count || 0), 0);
+        setGroqUsageMonth(total);
+      });
+
+    // Total analyses (health_scores count)
+    supabase
+      .from("health_scores")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .then(({ count }) => setTotalAnalyses(count || 0));
+
+    // Total briefings
+    supabase
+      .from("daily_briefs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .then(({ count }) => setTotalBriefings(count || 0));
   }, [user]);
+
+  const GROQ_DAILY_LIMIT = 14400;
+  const groqPercent = Math.min((groqUsageToday / GROQ_DAILY_LIMIT) * 100, 100);
+  const groqWarning = groqPercent >= 80;
 
   const handleSaveName = async () => {
     if (!user || !displayName.trim()) return;
@@ -211,6 +262,64 @@ export default function Profile() {
           <Button onClick={handleChangePassword} disabled={changingPassword || !newPassword} variant="outline" className="gap-2">
             <KeyRound className="h-4 w-4" /> {changingPassword ? "Alterando..." : "Alterar senha"}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* AI Usage Panel */}
+      <Card className="glass border-primary/20">
+        <CardHeader>
+          <CardTitle className="font-display text-lg flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" /> Uso de IA este mês
+          </CardTitle>
+          <CardDescription>Monitoramento de consumo dos serviços de IA</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Groq daily usage */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Groq (hoje)</span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {groqUsageToday.toLocaleString()} / {GROQ_DAILY_LIMIT.toLocaleString()}
+              </span>
+            </div>
+            <Progress value={groqPercent} className="h-2" />
+            {groqWarning && (
+              <div className="flex items-center gap-2 text-xs text-neutral">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>⚠️ Uso acima de 80% do limite diário! Considere reduzir operações.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-muted/50 p-3 text-center">
+              <FileText className="h-5 w-5 mx-auto text-primary mb-1" />
+              <p className="text-2xl font-display font-bold">{totalAnalyses}</p>
+              <p className="text-xs text-muted-foreground">Análises (Groq)</p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-3 text-center">
+              <Bell className="h-5 w-5 mx-auto text-primary mb-1" />
+              <p className="text-2xl font-display font-bold">{totalBriefings}</p>
+              <p className="text-xs text-muted-foreground">Briefings gerados</p>
+            </div>
+          </div>
+
+          {/* Monthly Groq */}
+          <div className="rounded-lg bg-muted/30 p-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Groq este mês</span>
+              <span className="font-medium">{groqUsageMonth.toLocaleString()} requisições</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            💡 Briefings agora usam Groq (gratuito) em vez da Lovable AI. Análises de documentos e chat também usam Groq.
+            A Lovable AI é usada apenas para extração de PDFs por OCR (Gemini Vision).
+          </p>
         </CardContent>
       </Card>
 
