@@ -193,7 +193,7 @@ export default function Profile() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Email</Label>
-            <Input value={user?.email || ""} disabled className="bg-muted/50" />
+            <Input value={user?.email ? maskEmail(user.email) : ""} disabled className="bg-muted/50" />
           </div>
           <div className="space-y-2">
             <Label>Nome de exibição</Label>
