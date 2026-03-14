@@ -70,6 +70,11 @@ function parseRedFlags(flags: Json | null): string[] {
 
 function scoreColor(s: number) { return s >= 80 ? "text-bullish" : s >= 60 ? "text-neutral" : "text-bearish"; }
 function scoreBg(s: number) { return s >= 80 ? "bg-bullish" : s >= 60 ? "bg-neutral" : "bg-bearish"; }
+// Inverted: low = good (green), high = bad (red) — for regulatory_risk
+function scoreColorInv(s: number) { return s <= 30 ? "text-bullish" : s <= 60 ? "text-neutral" : "text-bearish"; }
+function scoreBgInv(s: number) { return s <= 30 ? "bg-bullish" : s <= 60 ? "bg-neutral" : "bg-bearish"; }
+
+const INVERTED_KEYS = new Set(["regulatory_risk"]);
 
 function inferAssetType(ticker: string): string {
   const t = ticker.toUpperCase();
@@ -430,7 +435,7 @@ ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentim
                         {SUB_CATEGORIES.map(({ key, label }) => (
                           <div key={key} className="flex-1" title={`${label}: ${company[key]}`}>
                             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className={`h-full rounded-full ${scoreBg(company[key])}`} style={{ width: `${company[key]}%` }} />
+                              <div className={`h-full rounded-full ${INVERTED_KEYS.has(key) ? scoreBgInv(company[key]) : scoreBg(company[key])}`} style={{ width: `${company[key]}%` }} />
                             </div>
                           </div>
                         ))}
@@ -500,10 +505,10 @@ ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentim
                           <div key={key}>
                             <div className="flex justify-between text-xs mb-1">
                               <span className="text-muted-foreground">{label}</span>
-                              <span className={`font-medium ${scoreColor(company[key])}`}>{company[key]}</span>
+                              <span className={`font-medium ${INVERTED_KEYS.has(key) ? scoreColorInv(company[key]) : scoreColor(company[key])}`}>{company[key]}</span>
                             </div>
                             <div className="h-2 rounded-full bg-muted overflow-hidden">
-                              <div className={`h-full rounded-full ${scoreBg(company[key])}`} style={{ width: `${company[key]}%` }} />
+                              <div className={`h-full rounded-full ${INVERTED_KEYS.has(key) ? scoreBgInv(company[key]) : scoreBg(company[key])}`} style={{ width: `${company[key]}%` }} />
                             </div>
                           </div>
                         ))}
