@@ -79,6 +79,23 @@ export default function Chat() {
 
   const selectedDoc = documents.find((d) => d.id === selectedDocId) || null;
 
+  const hasUsableDocContext = useCallback((doc: Document | null) => {
+    if (!doc?.extracted_text) return false;
+
+    const text = doc.extracted_text.trim();
+    if (text.length < 500) return false;
+
+    const lower = text.toLowerCase();
+    const invalidMarkers = [
+      "falha na extração",
+      "não foi possível extrair",
+      "texto extraído limitado",
+      "use o botão editar para colar",
+    ];
+
+    return !invalidMarkers.some((marker) => lower.includes(marker));
+  }, []);
+
   const fetchConversations = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
