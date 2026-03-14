@@ -16,11 +16,26 @@ function cleanTextForLLM(text: string): string {
 }
 
 function isTextReadable(text: string): boolean {
-  if (text.length < 50) return false;
-  // Check if at least 60% of characters are readable (letters, digits, common punctuation)
-  const readableChars = text.match(/[a-zA-Z0-9\s.,;:!?()%$€R\-\/àáâãéêíóôõúçÀÁÂÃÉÊÍÓÔÕÚÇ]/g);
-  const ratio = (readableChars?.length || 0) / text.length;
-  return ratio > 0.6;
+  const normalized = text.trim();
+  if (normalized.length < 500) return false;
+
+  // Reject known fallback/error markers
+  const invalidMarkers = [
+    "falha na extração",
+    "não foi possível extrair",
+    "use o botão editar para colar",
+    "texto extraído limitado",
+    "documento pode",
+  ];
+  const lower = normalized.toLowerCase();
+  if (invalidMarkers.some((marker) => lower.includes(marker))) return false;
+
+  // Ensure meaningful language signal (letters) and readability ratio
+  const letters = normalized.match(/[a-zA-ZàáâãéêíóôõúçÀÁÂÃÉÊÍÓÔÕÚÇ]/g)?.length || 0;
+  const readableChars = normalized.match(/[a-zA-Z0-9\s.,;:!?()%$€R\-\/àáâãéêíóôõúçÀÁÂÃÉÊÍÓÔÕÚÇ]/g)?.length || 0;
+  const ratio = readableChars / normalized.length;
+
+  return letters >= 100 && ratio > 0.6;
 }
 
 function extractTextFromPdfStreams(pdfBytes: Uint8Array): string {
