@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,6 +75,7 @@ export default function Compare() {
   const [aiLoading, setAiLoading] = useState(false);
   const [battleHistory, setBattleHistory] = useState<BattleHistory[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     if (!user) return;
@@ -86,6 +88,11 @@ export default function Compare() {
       .then(({ data }) => {
         setScores((data as HealthScore[]) || []);
         setLoading(false);
+        // Pre-fill from query params
+        const t1 = searchParams.get("t1");
+        const t2 = searchParams.get("t2");
+        if (t1) setTicker1(t1);
+        if (t2) setTicker2(t2);
       });
     // Load battle history from localStorage
     const saved = localStorage.getItem(`battle_history_${user.id}`);
