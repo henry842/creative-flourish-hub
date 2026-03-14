@@ -20,6 +20,7 @@ import Pricing from "./pages/Pricing";
 import Profile from "./pages/Profile";
 import Assets from "./pages/Assets";
 import AssetDetail from "./pages/AssetDetail";
+import Briefing from "./pages/Briefing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
