@@ -454,6 +454,7 @@ PASSO 4 — REGRAS UNIVERSAIS:
     const { error: hsError } = await supabase.from("health_scores").insert({
       user_id: user.id,
       document_id,
+      asset_id: asset_id || null,
       ticker: ticker || null,
       overall_score: analysis.overall_score,
       revenue_growth: analysis.revenue_growth,
