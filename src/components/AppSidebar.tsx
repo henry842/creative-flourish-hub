@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, MessageSquare, TrendingUp, Swords, Trophy, LogOut, Sun, Moon, UserCircle } from "lucide-react";
+import { LayoutDashboard, FileText, MessageSquare, TrendingUp, Swords, Trophy, LogOut, Sun, Moon, UserCircle, FolderOpen } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
