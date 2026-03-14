@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, MessageSquare, TrendingUp, TrendingDown, Minus, Activity, Star, X, Plus } from "lucide-react";
+import { FileText, MessageSquare, TrendingUp, TrendingDown, Minus, Activity, Star, X, Plus, Bell } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "@/hooks/use-toast";
 
@@ -26,20 +27,23 @@ interface WatchlistItem {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [lastBrief, setLastBrief] = useState<{ content: string; created_at: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [newTicker, setNewTicker] = useState("");
   const [addingTicker, setAddingTicker] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
-    const [docsRes, convsRes, sentRes, watchRes, scoresRes] = await Promise.all([
+    const [docsRes, convsRes, sentRes, watchRes, scoresRes, briefRes] = await Promise.all([
       supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
       supabase.from("watchlist").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("health_scores").select("ticker, overall_score, sentiment, created_at").eq("user_id", user.id).not("ticker", "is", null).order("created_at", { ascending: false }),
+      supabase.from("daily_briefs").select("content, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
     ]);
 
     const sentiments = sentRes.data || [];
@@ -77,6 +81,9 @@ export default function Dashboard() {
       sentimentCounts: counts,
       recentSentiments: Object.entries(byDate).map(([date, v]) => ({ date, ...v })).reverse(),
     });
+    if (briefRes.data && briefRes.data.length > 0) {
+      setLastBrief(briefRes.data[0] as any);
+    }
     setLoading(false);
   };
 
@@ -235,6 +242,39 @@ export default function Dashboard() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Nenhum ticker na watchlist. Adicione acima!</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Last Briefing Card */}
+      <Card className="glass hover:shadow-lg transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="font-display flex items-center gap-2">
+            <Bell className="h-5 w-5 text-primary" /> Último Briefing
+          </CardTitle>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/briefing")}>
+            Ver completo →
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {lastBrief ? (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">
+                {new Date(lastBrief.created_at).toLocaleDateString("pt-BR", {
+                  weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                })}
+              </p>
+              <p className="text-sm line-clamp-3">
+                {lastBrief.content.split("\n").filter(l => l.trim()).slice(0, 3).join(" ").substring(0, 200)}...
+              </p>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground mb-2">Nenhum briefing gerado ainda</p>
+              <Button variant="secondary" size="sm" onClick={() => navigate("/briefing")}>
+                Configurar Briefing
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
