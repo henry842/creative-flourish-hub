@@ -312,7 +312,7 @@ PASSO 4 — REGRAS UNIVERSAIS:
 3. Red flags = pontos críticos ou preocupantes do documento
 4. Timeline = eventos ou etapas importantes mencionados
 5. Se o documento for em outro idioma, analise normalmente e responda em português
-6. Se uma métrica não puder ser determinada, use o valor 50 (neutro) e mencione na summary`
+6. Se uma métrica não puder ser determinada, use o valor 50 (neutro) e mencione na summary${customPrompt ? `\n\nCONTEXTO DO USUÁRIO: ${customPrompt}. Considere sempre esse contexto ao analisar o documento.` : ''}`
         },
         {
           role: "user",
