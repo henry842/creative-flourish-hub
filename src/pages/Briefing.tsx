@@ -184,18 +184,20 @@ export default function Briefing() {
     });
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("pt-BR", {
-      weekday: "short",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const deleteBrief = async (briefId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const { error } = await supabase.from("daily_briefs").delete().eq("id", briefId);
+      if (error) throw error;
+      setBriefs((prev) => prev.filter((b) => b.id !== briefId));
+      if (expandedBriefId === briefId) setExpandedBriefId(null);
+      toast({ title: "Briefing removido ✅" });
+    } catch (err: any) {
+      toast({ title: "Erro ao remover", description: err.message, variant: "destructive" });
+    }
   };
 
-  if (loading) {
+  const formatDate = (dateStr: string) => {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
