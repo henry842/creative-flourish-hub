@@ -16,11 +16,26 @@ function cleanTextForLLM(text: string): string {
 }
 
 function isTextReadable(text: string): boolean {
-  if (text.length < 50) return false;
-  // Check if at least 60% of characters are readable (letters, digits, common punctuation)
-  const readableChars = text.match(/[a-zA-Z0-9\s.,;:!?()%$€R\-\/àáâãéêíóôõúçÀÁÂÃÉÊÍÓÔÕÚÇ]/g);
-  const ratio = (readableChars?.length || 0) / text.length;
-  return ratio > 0.6;
+  const normalized = text.trim();
+  if (normalized.length < 500) return false;
+
+  // Reject known fallback/error markers
+  const invalidMarkers = [
+    "falha na extração",
+    "não foi possível extrair",
+    "use o botão editar para colar",
+    "texto extraído limitado",
+    "documento pode",
+  ];
+  const lower = normalized.toLowerCase();
+  if (invalidMarkers.some((marker) => lower.includes(marker))) return false;
+
+  // Ensure meaningful language signal (letters) and readability ratio
+  const letters = normalized.match(/[a-zA-ZàáâãéêíóôõúçÀÁÂÃÉÊÍÓÔÕÚÇ]/g)?.length || 0;
+  const readableChars = normalized.match(/[a-zA-Z0-9\s.,;:!?()%$€R\-\/àáâãéêíóôõúçÀÁÂÃÉÊÍÓÔÕÚÇ]/g)?.length || 0;
+  const ratio = readableChars / normalized.length;
+
+  return letters >= 100 && ratio > 0.6;
 }
 
 function extractTextFromPdfStreams(pdfBytes: Uint8Array): string {
@@ -68,20 +83,25 @@ function extractTextFromPdfStreams(pdfBytes: Uint8Array): string {
 async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string): Promise<string> {
   console.log("Using Gemini Vision for PDF text extraction...");
   
-  // Convert to base64 in chunks to avoid stack overflow on large files
-  let base64Pdf = "";
-  const chunkSize = 32768;
+  // Convert to base64 safely (single btoa call to avoid invalid chunked base64)
+  let binary = "";
+  const chunkSize = 0x8000;
   for (let i = 0; i < pdfBytes.length; i += chunkSize) {
-    const chunk = pdfBytes.slice(i, i + chunkSize);
-    base64Pdf += btoa(String.fromCharCode(...chunk));
+    const chunk = pdfBytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
   }
+  const base64Pdf = btoa(binary);
   
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
+
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
+    signal: controller.signal,
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
@@ -93,9 +113,10 @@ async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string)
               text: "Extraia TODO o texto visível deste documento PDF de forma organizada. Mantenha a estrutura original: títulos, subtítulos, tabelas (formate como texto), números, datas, rodapés. Inclua TODOS os dados numéricos e financeiros. Retorne APENAS o texto extraído, sem comentários ou explicações adicionais."
             },
             {
-              type: "image_url",
-              image_url: {
-                url: `data:application/pdf;base64,${base64Pdf}`
+              type: "file",
+              file: {
+                filename: "documento.pdf",
+                file_data: `data:application/pdf;base64,${base64Pdf}`
               }
             }
           ]
@@ -103,6 +124,8 @@ async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string)
       ],
     }),
   });
+
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errText = await response.text();
@@ -201,16 +224,23 @@ serve(async (req) => {
         text = basicText;
         console.log("Using basic text extraction (readable text found)");
       } else {
-        // Strategy 2: Use Gemini Vision (handles scanned PDFs, images, complex layouts)
-        try {
-          text = await extractTextWithGeminiVision(pdfBytes, LOVABLE_API_KEY);
-          if (!isTextReadable(text) || text.length < 100) {
-            text = `[Não foi possível extrair texto legível do PDF "${docRecord.name}". O documento pode estar protegido ou em formato não suportado. Use o botão Editar para colar o texto manualmente.]`;
-            console.warn("Both extraction methods failed");
+        // Strategy 2: Use Gemini Vision only for smaller files (large PDFs may timeout on OCR)
+        const MAX_VISION_PDF_BYTES = 1_500_000;
+
+        if (pdfBytes.length > MAX_VISION_PDF_BYTES) {
+          console.warn(`Skipping Gemini Vision: PDF too large (${pdfBytes.length} bytes)`);
+          text = `[Não foi possível extrair automaticamente o texto do PDF "${docRecord.name}" (arquivo grande e com texto não legível). Use o botão Editar para colar o texto manualmente.]`;
+        } else {
+          try {
+            text = await extractTextWithGeminiVision(pdfBytes, LOVABLE_API_KEY);
+            if (!isTextReadable(text) || text.length < 100) {
+              text = `[Não foi possível extrair texto legível do PDF "${docRecord.name}". O documento pode estar protegido ou em formato não suportado. Use o botão Editar para colar o texto manualmente.]`;
+              console.warn("Both extraction methods failed");
+            }
+          } catch (visionErr) {
+            console.error("Gemini Vision extraction failed:", visionErr);
+            text = `[Falha na extração do PDF "${docRecord.name}". Use o botão Editar para colar o texto manualmente.]`;
           }
-        } catch (visionErr) {
-          console.error("Gemini Vision extraction failed:", visionErr);
-          text = `[Falha na extração do PDF "${docRecord.name}". Use o botão Editar para colar o texto manualmente.]`;
         }
       }
 

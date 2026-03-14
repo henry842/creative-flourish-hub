@@ -79,6 +79,23 @@ export default function Chat() {
 
   const selectedDoc = documents.find((d) => d.id === selectedDocId) || null;
 
+  const hasUsableDocContext = useCallback((doc: Document | null) => {
+    if (!doc?.extracted_text) return false;
+
+    const text = doc.extracted_text.trim();
+    if (text.length < 500) return false;
+
+    const lower = text.toLowerCase();
+    const invalidMarkers = [
+      "falha na extração",
+      "não foi possível extrair",
+      "texto extraído limitado",
+      "use o botão editar para colar",
+    ];
+
+    return !invalidMarkers.some((marker) => lower.includes(marker));
+  }, []);
+
   const fetchConversations = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
@@ -194,8 +211,18 @@ export default function Chat() {
       
       // Build document context to send to the edge function
       let documentContext: string | undefined;
-      if (selectedDoc?.extracted_text) {
-        documentContext = `[DOCUMENTO SELECIONADO: "${selectedDoc.name}"${selectedDoc.ticker ? ` (Ticker: ${selectedDoc.ticker})` : ""}]\n\n${selectedDoc.extracted_text.slice(0, 12000)}`;
+      if (selectedDoc) {
+        if (!hasUsableDocContext(selectedDoc)) {
+          toast({
+            title: "Documento sem texto legível",
+            description: "Reanalise o arquivo ou use Editar para colar o texto do PDF antes de perguntar no chat.",
+            variant: "destructive",
+          });
+          setIsStreaming(false);
+          return;
+        }
+
+        documentContext = `[DOCUMENTO SELECIONADO: "${selectedDoc.name}"${selectedDoc.ticker ? ` (Ticker: ${selectedDoc.ticker})` : ""}]\n\n${selectedDoc.extracted_text!.slice(0, 12000)}`;
       }
 
       const resp = await fetch(CHAT_URL, {
