@@ -333,7 +333,7 @@ PASSO 4 — REGRAS UNIVERSAIS:
                 net_margin: { type: "integer", description: "For financial: net margin. For others: information quality score 0-100" },
                 debt_level: { type: "integer", description: "For financial: debt health. For others: clarity/organization score 0-100 (100 = excellent)" },
                 earnings_quality: { type: "integer", description: "For financial: earnings quality. For others: source reliability score 0-100" },
-                regulatory_risk: { type: "integer", description: "Risk score 0-100 (100 = low risk)" },
+                regulatory_risk: { type: "integer", description: "Regulatory risk level 0-100 where 0 = no risk (best) and 100 = maximum risk (worst). For FIIs with low regulatory exposure, use LOW values like 10-30" },
                 sentiment: { type: "string", enum: ["bullish", "bearish", "neutral"], description: "Overall sentiment: bullish=positive, bearish=negative, neutral" },
                 confidence: { type: "number", description: "Confidence level 0-1" },
                 summary: { type: "string", description: "Brief analysis summary in Portuguese (2-3 sentences). Mention the document type identified." },
