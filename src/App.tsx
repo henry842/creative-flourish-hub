@@ -18,6 +18,8 @@ import Compare from "./pages/Compare";
 import Ranking from "./pages/Ranking";
 import Pricing from "./pages/Pricing";
 import Profile from "./pages/Profile";
+import Assets from "./pages/Assets";
+import AssetDetail from "./pages/AssetDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
