@@ -37,7 +37,7 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     if (!user) return;
-    const [docsRes, convsRes, sentRes, watchRes, scoresRes] = await Promise.all([
+    const [docsRes, convsRes, sentRes, watchRes, scoresRes, briefRes] = await Promise.all([
       supabase.from("documents").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       supabase.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", user.id),
       supabase.from("sentiment_analyses").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
