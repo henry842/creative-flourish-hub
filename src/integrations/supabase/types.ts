@@ -14,8 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      assets: {
+        Row: {
+          asset_type: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          ticker: string | null
+          user_id: string
+        }
+        Insert: {
+          asset_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          ticker?: string | null
+          user_id: string
+        }
+        Update: {
+          asset_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          ticker?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
+          asset_id: string | null
           created_at: string
           id: string
           title: string
@@ -23,6 +54,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          asset_id?: string | null
           created_at?: string
           id?: string
           title?: string
@@ -30,16 +62,26 @@ export type Database = {
           user_id: string
         }
         Update: {
+          asset_id?: string | null
           created_at?: string
           id?: string
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
+          asset_id: string | null
           created_at: string
           doc_type: string | null
           extracted_text: string | null
@@ -53,6 +95,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          asset_id?: string | null
           created_at?: string
           doc_type?: string | null
           extracted_text?: string | null
@@ -66,6 +109,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          asset_id?: string | null
           created_at?: string
           doc_type?: string | null
           extracted_text?: string | null
@@ -78,7 +122,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documents_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       groq_usage: {
         Row: {
@@ -109,6 +161,7 @@ export type Database = {
       }
       health_scores: {
         Row: {
+          asset_id: string | null
           confidence: number | null
           created_at: string
           debt_level: number
@@ -130,6 +183,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          asset_id?: string | null
           confidence?: number | null
           created_at?: string
           debt_level?: number
@@ -151,6 +205,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          asset_id?: string | null
           confidence?: number | null
           created_at?: string
           debt_level?: number
@@ -172,6 +227,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "health_scores_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "health_scores_document_id_fkey"
             columns: ["document_id"]
