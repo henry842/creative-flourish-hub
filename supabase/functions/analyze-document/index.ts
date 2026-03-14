@@ -268,21 +268,46 @@ serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: `Você é um analista financeiro sênior especializado em Fundos de Investimento Imobiliário (FII) brasileiros com 15 anos de experiência. Analise o documento fornecido com profundidade e precisão.
+          content: `Você é um especialista multidisciplinar capaz de analisar qualquer tipo de documento: financeiro, científico, jurídico, médico, técnico, acadêmico, jornalístico ou qualquer outra área.
 
-REGRAS OBRIGATÓRIAS:
-1. Use APENAS dados do documento. Nunca invente ou assuma informações
-2. Para FIIs, avalie: Dividend Yield, P/VP, vacância, qualidade dos inquilinos, tipo de contrato (típico/atípico), duration dos CRIs, inadimplência, liquidez diária
-3. Red Flags reais de FII: vacância acima de 10%, P/VP acima de 1,15, DY abaixo de 10%, CRIs em recuperação judicial, concentração acima de 30% em único devedor, queda de rendimento por 3+ meses
-4. Na summary mencione: tipo do FII (tijolo/papel/híbrido), estratégia principal, pontos fortes e fracos
-5. Price target para FII: calcule baseado no DY justo vs CDI atual (use 13% como referência de CDI)
-6. Sentimento: bullish se DY > CDI+3%, neutro se DY entre CDI e CDI+3%, bearish se DY < CDI
+PASSO 1 — IDENTIFIQUE O TIPO:
+Leia o documento e classifique em uma dessas categorias:
+- Financeiro (FII, ações, balanços, relatórios)
+- Científico/Acadêmico (artigos, pesquisas, teses)
+- Jurídico (contratos, leis, processos)
+- Médico/Saúde (laudos, bulas, estudos clínicos)
+- Técnico (manuais, especificações, engenharia)
+- Jornalístico (notícias, reportagens)
+- Outro (qualquer documento não listado acima)
 
-Se uma métrica não puder ser determinada a partir do documento, use o valor 50 (neutro) e mencione na summary que a informação não estava disponível.`
+PASSO 2 — ADAPTE A ANÁLISE:
+Para FINANCEIRO: avalie indicadores, riscos, retorno, red flags
+Para CIENTÍFICO: avalie metodologia, conclusões, limitações, relevância
+Para JURÍDICO: avalie cláusulas importantes, riscos, obrigações
+Para MÉDICO: avalie diagnóstico, riscos, recomendações
+Para TÉCNICO: avalie especificações, pontos críticos, limitações
+Para JORNALÍSTICO: avalie fatos principais, fontes, impacto
+Para OUTRO: extraia os pontos mais importantes do documento
+
+PASSO 3 — ADAPTE OS SCORES:
+Os scores de 0-100 devem refletir a área do documento:
+- revenue_growth → para não-financeiros use como "relevância/impacto" (0-100)
+- net_margin → use como "qualidade das informações" (0-100)
+- debt_level → use como "clareza e organização" (0-100)
+- earnings_quality → use como "confiabilidade das fontes" (0-100)
+- regulatory_risk → use como "riscos identificados" (0-100 onde 100 = baixo risco)
+
+PASSO 4 — REGRAS UNIVERSAIS:
+1. Nunca invente informações — use APENAS o que está no documento
+2. Summary em português claro e acessível para qualquer pessoa
+3. Red flags = pontos críticos ou preocupantes do documento
+4. Timeline = eventos ou etapas importantes mencionados
+5. Se o documento for em outro idioma, analise normalmente e responda em português
+6. Se uma métrica não puder ser determinada, use o valor 50 (neutro) e mencione na summary`
         },
         {
           role: "user",
-          content: `Analise este documento financeiro${ticker ? ` da empresa ${ticker}` : ""}:\n\n${text!.slice(0, 8000)}`
+          content: `Analise este documento${ticker ? ` (ticker: ${ticker})` : ""}:\n\n${text!.slice(0, 8000)}`
         }
       ],
       tools: [
@@ -290,26 +315,26 @@ Se uma métrica não puder ser determinada a partir do documento, use o valor 50
           type: "function",
           function: {
             name: "submit_financial_analysis",
-            description: "Submit the complete financial health analysis of a document",
+            description: "Submit the complete document analysis with adapted scores",
             parameters: {
               type: "object",
               properties: {
-                overall_score: { type: "integer", description: "Overall financial health score 0-100" },
-                revenue_growth: { type: "integer", description: "Revenue growth score 0-100" },
-                net_margin: { type: "integer", description: "Net margin quality score 0-100" },
-                debt_level: { type: "integer", description: "Debt health score 0-100 (100 = low debt, healthy)" },
-                earnings_quality: { type: "integer", description: "Earnings quality score 0-100" },
-                regulatory_risk: { type: "integer", description: "Regulatory risk score 0-100 (100 = low risk)" },
-                sentiment: { type: "string", enum: ["bullish", "bearish", "neutral"], description: "Overall sentiment" },
+                overall_score: { type: "integer", description: "Overall document quality/health score 0-100" },
+                revenue_growth: { type: "integer", description: "For financial: revenue growth. For others: relevance/impact score 0-100" },
+                net_margin: { type: "integer", description: "For financial: net margin. For others: information quality score 0-100" },
+                debt_level: { type: "integer", description: "For financial: debt health. For others: clarity/organization score 0-100 (100 = excellent)" },
+                earnings_quality: { type: "integer", description: "For financial: earnings quality. For others: source reliability score 0-100" },
+                regulatory_risk: { type: "integer", description: "Risk score 0-100 (100 = low risk)" },
+                sentiment: { type: "string", enum: ["bullish", "bearish", "neutral"], description: "Overall sentiment: bullish=positive, bearish=negative, neutral" },
                 confidence: { type: "number", description: "Confidence level 0-1" },
-                summary: { type: "string", description: "Brief analysis summary in Portuguese (2-3 sentences)" },
-                price_target_low: { type: "integer", description: "Conservative price target in the stock's currency. If not applicable, use 0" },
-                price_target_high: { type: "integer", description: "Optimistic price target in the stock's currency. If not applicable, use 0" },
-                price_target_rationale: { type: "string", description: "Brief rationale for the price target in Portuguese (1-2 sentences)" },
+                summary: { type: "string", description: "Brief analysis summary in Portuguese (2-3 sentences). Mention the document type identified." },
+                price_target_low: { type: "integer", description: "For financial: conservative price target. For others: use 0" },
+                price_target_high: { type: "integer", description: "For financial: optimistic price target. For others: use 0" },
+                price_target_rationale: { type: "string", description: "For financial: price target rationale. For others: brief key takeaway in Portuguese" },
                 red_flags: {
                   type: "array",
                   items: { type: "string" },
-                  description: "Up to 5 critical risk flags in Portuguese, based ONLY on document content"
+                  description: "Up to 5 critical concerns/risks in Portuguese, based ONLY on document content"
                 },
                 timeline_events: {
                   type: "array",
@@ -321,7 +346,7 @@ Se uma métrica não puder ser determinada a partir do documento, use o valor 50
                     },
                     required: ["date", "event"]
                   },
-                  description: "Key financial events extracted from the document"
+                  description: "Key events or milestones extracted from the document"
                 }
               },
               required: ["overall_score", "revenue_growth", "net_margin", "debt_level", "earnings_quality", "regulatory_risk", "sentiment", "confidence", "summary", "price_target_low", "price_target_high", "price_target_rationale", "red_flags", "timeline_events"],
