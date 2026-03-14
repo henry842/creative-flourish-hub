@@ -449,44 +449,93 @@ export default function AssetDetail() {
               <CardContent className="flex-1 flex flex-col p-4 min-h-0">
                 {!activeConv ? (
                   <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center space-y-3">
-                      <Bot className="h-12 w-12 mx-auto text-primary/50" />
-                      <h3 className="font-display text-lg font-semibold">Chat do {asset.name}</h3>
-                      <p className="text-sm text-muted-foreground max-w-sm">
-                        Converse com a IA tendo como contexto <strong>todos os documentos</strong> deste ativo.
+                    <div className="text-center space-y-4 max-w-sm">
+                      <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                        <MessageSquare className="h-7 w-7 text-primary" />
+                      </div>
+                      <h3 className="font-display text-lg font-semibold flex items-center justify-center gap-2">
+                        Chat — {asset.ticker || asset.name}
+                      </h3>
+                      <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3">
+                        <p className="text-xs text-primary font-medium flex items-center gap-2">
+                          <FileText className="h-3.5 w-3.5" />
+                          Este chat tem acesso automático a todos os {documents.filter((d) => d.extracted_text).length} documentos de {asset.ticker || asset.name}
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Converse com a IA tendo como contexto <strong>todos os relatórios</strong> deste ativo.
                       </p>
                       <Button onClick={createConversation} className="gap-2">
-                        <Plus className="h-4 w-4" /> Nova conversa
+                        <Plus className="h-4 w-4" /> Iniciar conversa
                       </Button>
-                      <Button onClick={createConversation} className="gap-2 md:hidden" variant="outline" size="sm">
-                        <Plus className="h-3 w-3" /> Nova
-                      </Button>
+
+                      {/* Asset-specific suggestions preview */}
+                      <div className="flex flex-wrap gap-1.5 justify-center pt-2">
+                        {[
+                          "Como evoluiu o Health Score?",
+                          "Compare os relatórios disponíveis",
+                          asset.asset_type === "fii" ? "Qual o DY atual?" : "Como estão as margens?",
+                        ].map((q) => (
+                          <Badge key={q} variant="outline" className="text-[10px] text-muted-foreground">{q}</Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : (
                   <>
+                    {/* Specialized header */}
                     <div className="flex items-center gap-2 pb-2 mb-2 border-b border-border/50">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <MessageSquare className="h-3 w-3 text-primary" />
+                      </div>
+                      <span className="text-sm font-medium">Chat — {asset.ticker || asset.name}</span>
+                      <div className="flex-1" />
                       <Badge variant="outline" className="text-[10px] gap-1 border-primary/30 text-primary">
                         <FileText className="h-3 w-3" />
-                        {documents.filter((d) => d.extracted_text).length} docs no contexto
+                        {documents.filter((d) => d.extracted_text).length} docs
                       </Badge>
                     </div>
+
+                    {/* Blue context banner */}
+                    <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 mb-2">
+                      <p className="text-[11px] text-primary flex items-center gap-1.5">
+                        <FileText className="h-3 w-3 shrink-0" />
+                        Acesso automático a {documents.filter((d) => d.extracted_text).length} documentos de {asset.ticker || asset.name}
+                      </p>
+                    </div>
+
                     <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
                       <div className="space-y-4 pb-4">
                         {messages.map((msg, i) => (
-                          <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                          <div key={i} className={`group/msg flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                             {msg.role === "assistant" && (
                               <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
                                 <Bot className="h-3.5 w-3.5 text-primary" />
                               </div>
                             )}
-                            <div className={`max-w-[80%] rounded-xl px-4 py-3 ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                              {msg.role === "assistant" ? (
-                                <div className="prose prose-sm dark:prose-invert max-w-none">
-                                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                                </div>
-                              ) : (
-                                <p className="text-sm">{msg.content}</p>
+                            <div className="relative max-w-[80%]">
+                              <div className={`rounded-xl px-4 py-3 ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                                {msg.role === "assistant" ? (
+                                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm">{msg.content}</p>
+                                )}
+                              </div>
+                              {msg.role === "assistant" && msg.content && (
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="absolute -bottom-3 right-2 h-6 w-6 bg-background shadow-sm opacity-0 group-hover/msg:opacity-100 transition-opacity"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(msg.content);
+                                    toast({ title: "Copiado! 📋" });
+                                  }}
+                                  title="Copiar"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
                               )}
                             </div>
                             {msg.role === "user" && (
@@ -512,9 +561,27 @@ export default function AssetDetail() {
                         )}
                       </div>
                     </ScrollArea>
+
+                    {/* Asset-specific suggestions */}
+                    {messages.length === 0 && !isStreaming && (
+                      <div className="flex flex-wrap gap-2 pb-2">
+                        {[
+                          "Como evoluiu o Health Score?",
+                          "Compare os relatórios disponíveis",
+                          asset.asset_type === "fii" ? "Qual o Dividend Yield?" : "Qual o EBITDA?",
+                          asset.asset_type === "fii" ? "Como está a vacância?" : "Como estão as margens?",
+                          "Quais os principais riscos?",
+                        ].map((q) => (
+                          <Button key={q} variant="outline" size="sm" className="text-xs" onClick={() => setInput(q)}>
+                            {q}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="flex gap-2 pt-3 border-t border-border/50">
                       <Input
-                        placeholder={`Pergunte sobre ${asset.name}...`}
+                        placeholder={`Pergunte sobre ${asset.ticker || asset.name}...`}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
