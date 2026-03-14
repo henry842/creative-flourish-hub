@@ -93,9 +93,10 @@ async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string)
               text: "Extraia TODO o texto visível deste documento PDF de forma organizada. Mantenha a estrutura original: títulos, subtítulos, tabelas (formate como texto), números, datas, rodapés. Inclua TODOS os dados numéricos e financeiros. Retorne APENAS o texto extraído, sem comentários ou explicações adicionais."
             },
             {
-              type: "image_url",
-              image_url: {
-                url: `data:application/pdf;base64,${base64Pdf}`
+              type: "file",
+              file: {
+                filename: "documento.pdf",
+                file_data: `data:application/pdf;base64,${base64Pdf}`
               }
             }
           ]
