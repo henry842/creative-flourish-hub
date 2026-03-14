@@ -11,7 +11,6 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Index";
-import Documents from "./pages/Documents";
 import Chat from "./pages/Chat";
 import Sentiment from "./pages/Sentiment";
 import Compare from "./pages/Compare";
