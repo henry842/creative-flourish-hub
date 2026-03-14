@@ -9,40 +9,40 @@ const corsHeaders = {
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 function cleanTextForLLM(text: string): string {
-  // Remove control characters except newline/tab/carriage return
   return text
-    .replace(/[^\x20-\x7E\xA0-\xFF\n\r\t]/g, " ")
+    .replace(/[^\x20-\x7E\xA0-\xFF\n\r\t\u00C0-\u024F\u1E00-\u1EFF]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-async function extractTextFromPdf(pdfBytes: Uint8Array): Promise<string> {
-  // Simple PDF text extraction - handles most text-based PDFs
+function isTextReadable(text: string): boolean {
+  if (text.length < 50) return false;
+  // Check if at least 60% of characters are readable (letters, digits, common punctuation)
+  const readableChars = text.match(/[a-zA-Z0-9\s.,;:!?()%$€R\-\/àáâãéêíóôõúçÀÁÂÃÉÊÍÓÔÕÚÇ]/g);
+  const ratio = (readableChars?.length || 0) / text.length;
+  return ratio > 0.6;
+}
+
+function extractTextFromPdfStreams(pdfBytes: Uint8Array): string {
   const decoder = new TextDecoder("latin1");
   const raw = decoder.decode(pdfBytes);
   
   const textChunks: string[] = [];
   
-  // Extract text from PDF stream objects
   const streamRegex = /stream\r?\n([\s\S]*?)endstream/g;
   let match;
   while ((match = streamRegex.exec(raw)) !== null) {
     const content = match[1];
-    // Look for text operations in PDF content streams
     const textOpRegex = /\(([^)]*)\)\s*Tj|\[(.*?)\]\s*TJ/g;
     let textMatch;
     while ((textMatch = textOpRegex.exec(content)) !== null) {
       const text = textMatch[1] || textMatch[2];
       if (text) {
-        // Clean up TJ array format
         const cleaned = text.replace(/\)\s*[-\d.]+\s*\(/g, "").replace(/^\(|\)$/g, "");
-        if (cleaned.trim()) {
-          textChunks.push(cleaned);
-        }
+        if (cleaned.trim()) textChunks.push(cleaned);
       }
     }
     
-    // Also look for BT...ET text blocks with Td/Tm positioning
     const btBlocks = content.match(/BT[\s\S]*?ET/g);
     if (btBlocks) {
       for (const block of btBlocks) {
@@ -57,16 +57,63 @@ async function extractTextFromPdf(pdfBytes: Uint8Array): Promise<string> {
     }
   }
   
-  // Deduplicate consecutive identical chunks
   const deduped: string[] = [];
   for (const chunk of textChunks) {
-    if (deduped[deduped.length - 1] !== chunk) {
-      deduped.push(chunk);
-    }
+    if (deduped[deduped.length - 1] !== chunk) deduped.push(chunk);
   }
   
-  const result = deduped.join(" ").replace(/\s+/g, " ").trim();
-  return cleanTextForLLM(result);
+  return cleanTextForLLM(deduped.join(" "));
+}
+
+async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string): Promise<string> {
+  console.log("Using Gemini Vision for PDF text extraction...");
+  
+  // Convert to base64 in chunks to avoid stack overflow on large files
+  let base64Pdf = "";
+  const chunkSize = 32768;
+  for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+    const chunk = pdfBytes.slice(i, i + chunkSize);
+    base64Pdf += btoa(String.fromCharCode(...chunk));
+  }
+  
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Extraia TODO o texto visível deste documento PDF de forma organizada. Mantenha a estrutura original: títulos, subtítulos, tabelas (formate como texto), números, datas, rodapés. Inclua TODOS os dados numéricos e financeiros. Retorne APENAS o texto extraído, sem comentários ou explicações adicionais."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:application/pdf;base64,${base64Pdf}`
+              }
+            }
+          ]
+        }
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Gemini Vision error:", response.status, errText);
+    throw new Error(`Gemini Vision failed: ${response.status}`);
+  }
+
+  const result = await response.json();
+  const extracted = result.choices?.[0]?.message?.content || "";
+  console.log(`Gemini Vision extracted ${extracted.length} chars`);
+  return cleanTextForLLM(extracted);
 }
 
 serve(async (req) => {
@@ -95,7 +142,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user from token
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: userError } = await anonClient.auth.getUser(token);
@@ -109,7 +155,10 @@ serve(async (req) => {
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
 
-    // Fetch document record to get file_path
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Fetch document record
     const { data: docRecord, error: docError } = await supabase
       .from("documents")
       .select("file_path, name, extracted_text")
@@ -123,9 +172,11 @@ serve(async (req) => {
       });
     }
 
-    // Extract text from PDF if not already extracted
+    // Check if existing extracted_text is readable, otherwise re-extract
     let text = docRecord.extracted_text;
-    if (!text) {
+    const needsExtraction = !text || !isTextReadable(text);
+
+    if (needsExtraction) {
       console.log(`Downloading PDF from storage: ${docRecord.file_path}`);
       const { data: fileData, error: downloadError } = await supabase.storage
         .from("documents")
@@ -141,67 +192,29 @@ serve(async (req) => {
 
       const pdfBytes = new Uint8Array(await fileData.arrayBuffer());
       console.log(`PDF size: ${pdfBytes.length} bytes`);
-      
-      text = await extractTextFromPdf(pdfBytes);
-      console.log(`Extracted text length: ${text.length} chars`);
 
-      if (text.length < 50) {
-        // Fallback: use Gemini vision to read image-based PDFs
-        console.warn("Extracted text too short, attempting Gemini vision OCR...");
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        if (LOVABLE_API_KEY) {
-          try {
-            const base64Pdf = btoa(String.fromCharCode(...pdfBytes));
-            const visionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
-                messages: [
-                  {
-                    role: "user",
-                    content: [
-                      {
-                        type: "text",
-                        text: "Extraia TODO o texto visível deste documento PDF. Inclua números, tabelas, títulos, rodapés - tudo. Retorne apenas o texto extraído, sem comentários adicionais."
-                      },
-                      {
-                        type: "image_url",
-                        image_url: {
-                          url: `data:application/pdf;base64,${base64Pdf}`
-                        }
-                      }
-                    ]
-                  }
-                ],
-              }),
-            });
+      // Strategy 1: Try basic text extraction first (fast, free)
+      const basicText = extractTextFromPdfStreams(pdfBytes);
+      console.log(`Basic extraction: ${basicText.length} chars, readable: ${isTextReadable(basicText)}`);
 
-            if (visionResponse.ok) {
-              const visionResult = await visionResponse.json();
-              const extractedByVision = visionResult.choices?.[0]?.message?.content || "";
-              if (extractedByVision.length > 50) {
-                text = cleanTextForLLM(extractedByVision);
-                console.log(`Gemini vision extracted ${text.length} chars`);
-              }
-            } else {
-              console.error("Gemini vision failed:", visionResponse.status, await visionResponse.text());
-            }
-          } catch (visionErr) {
-            console.error("Gemini vision error:", visionErr);
+      if (isTextReadable(basicText) && basicText.length > 200) {
+        text = basicText;
+        console.log("Using basic text extraction (readable text found)");
+      } else {
+        // Strategy 2: Use Gemini Vision (handles scanned PDFs, images, complex layouts)
+        try {
+          text = await extractTextWithGeminiVision(pdfBytes, LOVABLE_API_KEY);
+          if (!isTextReadable(text) || text.length < 100) {
+            text = `[Não foi possível extrair texto legível do PDF "${docRecord.name}". O documento pode estar protegido ou em formato não suportado. Use o botão Editar para colar o texto manualmente.]`;
+            console.warn("Both extraction methods failed");
           }
-        }
-
-        if (text.length < 50) {
-          text = `[Texto extraído limitado do PDF "${docRecord.name}". O documento pode conter imagens ou formatação complexa. Use o botão Editar para colar o texto manualmente.]`;
-          console.warn("All extraction methods failed for this PDF");
+        } catch (visionErr) {
+          console.error("Gemini Vision extraction failed:", visionErr);
+          text = `[Falha na extração do PDF "${docRecord.name}". Use o botão Editar para colar o texto manualmente.]`;
         }
       }
 
-      // Save extracted text to database
+      // Save extracted text
       await supabase
         .from("documents")
         .update({ extracted_text: text })
@@ -210,7 +223,7 @@ serve(async (req) => {
       console.log("Saved extracted_text to documents table");
     }
 
-    // Track usage helper
+    // Track usage
     const incrementUsage = async () => {
       const today = new Date().toISOString().split("T")[0];
       const { data: existing } = await supabase
@@ -232,7 +245,7 @@ serve(async (req) => {
       }
     };
 
-    // Groq models to try (best first, then fallbacks)
+    // Groq models to try
     const models = [
       "llama-3.3-70b-versatile",
       "llama-3.1-8b-instant",
@@ -249,7 +262,7 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
         },
         {
           role: "user",
-          content: `Analise este documento financeiro${ticker ? ` da empresa ${ticker}` : ""}:\n\n${text.slice(0, 8000)}`
+          content: `Analise este documento financeiro${ticker ? ` da empresa ${ticker}` : ""}:\n\n${text!.slice(0, 8000)}`
         }
       ],
       tools: [
@@ -319,7 +332,6 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
       lastError = await res.text();
       console.error(`Groq model ${model} failed (${res.status}):`, lastError);
       
-      // For tool_use_failed errors, try to extract JSON from the failed_generation
       if (res.status === 400 && lastError.includes("tool_use_failed")) {
         console.log("Attempting to extract JSON from failed_generation...");
         try {
@@ -337,7 +349,6 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
         } catch (extractErr) {
           console.error("Failed to extract from failed_generation:", extractErr);
         }
-        // Continue to next model instead of returning error
         continue;
       }
       
@@ -356,10 +367,8 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
       });
     }
 
-    // Track usage
     await incrementUsage();
 
-    // Extract analysis - try tool_calls first, then fallback to content parsing
     let analysis: any;
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
@@ -384,7 +393,10 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
 
     if (!analysis) throw new Error("Could not extract structured data from AI response");
 
-    // Save health score
+    // Delete old health_scores and sentiment for this document before inserting new ones
+    await supabase.from("health_scores").delete().eq("document_id", document_id).eq("user_id", user.id);
+    await supabase.from("sentiment_analyses").delete().eq("document_id", document_id).eq("user_id", user.id);
+
     const { error: hsError } = await supabase.from("health_scores").insert({
       user_id: user.id,
       document_id,
@@ -406,7 +418,6 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
     });
     if (hsError) console.error("health_scores insert error:", hsError);
 
-    // Save sentiment analysis
     const { error: saError } = await supabase.from("sentiment_analyses").insert({
       user_id: user.id,
       document_id,
@@ -417,7 +428,6 @@ IMPORTANTE: Baseie sua análise EXCLUSIVAMENTE no conteúdo do documento forneci
     });
     if (saError) console.error("sentiment_analyses insert error:", saError);
 
-    // Update document status
     await supabase.from("documents").update({ status: "processed" }).eq("id", document_id);
 
     return new Response(JSON.stringify({ success: true, analysis }), {
