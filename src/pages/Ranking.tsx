@@ -435,7 +435,7 @@ ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentim
                         {SUB_CATEGORIES.map(({ key, label }) => (
                           <div key={key} className="flex-1" title={`${label}: ${company[key]}`}>
                             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className={`h-full rounded-full ${scoreBg(company[key])}`} style={{ width: `${company[key]}%` }} />
+                              <div className={`h-full rounded-full ${INVERTED_KEYS.has(key) ? scoreBgInv(company[key]) : scoreBg(company[key])}`} style={{ width: `${company[key]}%` }} />
                             </div>
                           </div>
                         ))}
