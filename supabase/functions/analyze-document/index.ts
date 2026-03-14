@@ -304,7 +304,7 @@ Os scores de 0-100 devem refletir a área do documento:
 - net_margin → use como "qualidade das informações" (0-100)
 - debt_level → use como "clareza e organização" (0-100)
 - earnings_quality → use como "confiabilidade das fontes" (0-100)
-- regulatory_risk → use como "riscos identificados" (0-100 onde 100 = baixo risco)
+- regulatory_risk → nível de risco regulatório de 0-100 onde 0 = nenhum risco (ótimo) e 100 = risco máximo (péssimo). Para FIIs e ativos com pouca exposição regulatória, use valores BAIXOS (ex: 10-30) pois isso é POSITIVO
 
 PASSO 4 — REGRAS UNIVERSAIS:
 1. Nunca invente informações — use APENAS o que está no documento
