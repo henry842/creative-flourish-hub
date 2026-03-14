@@ -161,7 +161,10 @@ async function generateBriefForUser(
           },
           body: JSON.stringify({
             model: "perplexity/sonar",
-            messages: [{ role: "user", content: newsPrompt }],
+            messages: [
+              { role: "system", content: "Você é um assistente financeiro especializado no mercado brasileiro. Responda de forma concisa e factual." },
+              { role: "user", content: newsPrompt },
+            ],
           }),
         }
       );
