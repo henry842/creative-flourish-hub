@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppLayout } from "@/components/AppLayout";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { SessionGuard } from "@/components/SessionGuard";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Landing from "./pages/Landing";
@@ -28,7 +29,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-display text-xl">FinSight AI</div></div>;
   if (!user) return <Navigate to="/landing" replace />;
-  return <AppLayout><OnboardingModal />{children}</AppLayout>;
+  return <AppLayout><SessionGuard /><OnboardingModal />{children}</AppLayout>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
