@@ -134,7 +134,7 @@ serve(async (req) => {
   }
 
   try {
-    const { document_id, ticker } = await req.json();
+    const { document_id, ticker, asset_id } = await req.json();
     if (!document_id) {
       return new Response(JSON.stringify({ error: "document_id is required" }), {
         status: 400,
