@@ -309,10 +309,11 @@ Os scores de 0-100 devem refletir a área do documento:
 PASSO 4 — REGRAS UNIVERSAIS:
 1. Nunca invente informações — use APENAS o que está no documento
 2. Summary em português claro e acessível para qualquer pessoa
-3. Red flags = pontos críticos ou preocupantes do documento
+3. Red flags = apenas riscos CRÍTICOS e estruturais (ex: risco de inadimplência relevante, risco jurídico grave, quebra de covenant, fraude, perda material). NÃO classifique como red flag oscilações macro comuns (ex: IPCA mensal) ou pressões conjunturais moderadas
 4. Timeline = eventos ou etapas importantes mencionados
 5. Se o documento for em outro idioma, analise normalmente e responda em português
-6. Se uma métrica não puder ser determinada, use o valor 50 (neutro) e mencione na summary${customPrompt ? `\n\nCONTEXTO DO USUÁRIO: ${customPrompt}. Considere sempre esse contexto ao analisar o documento.` : ''}`
+6. Se uma métrica não puder ser determinada, use o valor 50 (neutro) e mencione na summary
+7. Se regulatory_risk <= 30, evite red flags regulatórias; nesse caso prefira lista vazia ou no máximo pontos realmente críticos${customPrompt ? `\n\nCONTEXTO DO USUÁRIO: ${customPrompt}. Considere sempre esse contexto ao analisar o documento.` : ''}`
         },
         {
           role: "user",
