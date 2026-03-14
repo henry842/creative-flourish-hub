@@ -224,16 +224,23 @@ serve(async (req) => {
         text = basicText;
         console.log("Using basic text extraction (readable text found)");
       } else {
-        // Strategy 2: Use Gemini Vision (handles scanned PDFs, images, complex layouts)
-        try {
-          text = await extractTextWithGeminiVision(pdfBytes, LOVABLE_API_KEY);
-          if (!isTextReadable(text) || text.length < 100) {
-            text = `[Não foi possível extrair texto legível do PDF "${docRecord.name}". O documento pode estar protegido ou em formato não suportado. Use o botão Editar para colar o texto manualmente.]`;
-            console.warn("Both extraction methods failed");
+        // Strategy 2: Use Gemini Vision only for smaller files (large PDFs may timeout on OCR)
+        const MAX_VISION_PDF_BYTES = 1_500_000;
+
+        if (pdfBytes.length > MAX_VISION_PDF_BYTES) {
+          console.warn(`Skipping Gemini Vision: PDF too large (${pdfBytes.length} bytes)`);
+          text = `[Não foi possível extrair automaticamente o texto do PDF "${docRecord.name}" (arquivo grande e com texto não legível). Use o botão Editar para colar o texto manualmente.]`;
+        } else {
+          try {
+            text = await extractTextWithGeminiVision(pdfBytes, LOVABLE_API_KEY);
+            if (!isTextReadable(text) || text.length < 100) {
+              text = `[Não foi possível extrair texto legível do PDF "${docRecord.name}". O documento pode estar protegido ou em formato não suportado. Use o botão Editar para colar o texto manualmente.]`;
+              console.warn("Both extraction methods failed");
+            }
+          } catch (visionErr) {
+            console.error("Gemini Vision extraction failed:", visionErr);
+            text = `[Falha na extração do PDF "${docRecord.name}". Use o botão Editar para colar o texto manualmente.]`;
           }
-        } catch (visionErr) {
-          console.error("Gemini Vision extraction failed:", visionErr);
-          text = `[Falha na extração do PDF "${docRecord.name}". Use o botão Editar para colar o texto manualmente.]`;
         }
       }
 
