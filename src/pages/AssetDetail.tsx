@@ -21,7 +21,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import {
   ArrowLeft, Upload, FileText, Zap, Trash2, Clock, CheckCircle, AlertCircle,
-  Send, Bot, User, Plus, MessageSquare, RefreshCw,
+  Send, Bot, User, Plus, MessageSquare, RefreshCw, Copy,
 } from "lucide-react";
 
 interface Asset {
