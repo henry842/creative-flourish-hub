@@ -134,7 +134,7 @@ serve(async (req) => {
   }
 
   try {
-    const { document_id, ticker } = await req.json();
+    const { document_id, ticker, asset_id } = await req.json();
     if (!document_id) {
       return new Response(JSON.stringify({ error: "document_id is required" }), {
         status: 400,
@@ -454,6 +454,7 @@ PASSO 4 — REGRAS UNIVERSAIS:
     const { error: hsError } = await supabase.from("health_scores").insert({
       user_id: user.id,
       document_id,
+      asset_id: asset_id || null,
       ticker: ticker || null,
       overall_score: analysis.overall_score,
       revenue_growth: analysis.revenue_growth,
