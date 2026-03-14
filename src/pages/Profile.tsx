@@ -40,6 +40,8 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user) return;
+
+    // Profile data
     supabase
       .from("profiles")
       .select("display_name, custom_prompt")
@@ -49,7 +51,51 @@ export default function Profile() {
         if (data?.display_name) setDisplayName(data.display_name);
         if ((data as any)?.custom_prompt) setCustomPrompt((data as any).custom_prompt);
       });
+
+    // Usage stats
+    const today = new Date().toISOString().split("T")[0];
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    // Groq usage today
+    supabase
+      .from("groq_usage")
+      .select("request_count")
+      .eq("user_id", user.id)
+      .eq("date", today)
+      .maybeSingle()
+      .then(({ data }) => setGroqUsageToday(data?.request_count || 0));
+
+    // Groq usage this month
+    supabase
+      .from("groq_usage")
+      .select("request_count")
+      .eq("user_id", user.id)
+      .gte("date", monthStart.toISOString().split("T")[0])
+      .then(({ data }) => {
+        const total = (data || []).reduce((sum: number, d: any) => sum + (d.request_count || 0), 0);
+        setGroqUsageMonth(total);
+      });
+
+    // Total analyses (health_scores count)
+    supabase
+      .from("health_scores")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .then(({ count }) => setTotalAnalyses(count || 0));
+
+    // Total briefings
+    supabase
+      .from("daily_briefs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .then(({ count }) => setTotalBriefings(count || 0));
   }, [user]);
+
+  const GROQ_DAILY_LIMIT = 14400;
+  const groqPercent = Math.min((groqUsageToday / GROQ_DAILY_LIMIT) * 100, 100);
+  const groqWarning = groqPercent >= 80;
 
   const handleSaveName = async () => {
     if (!user || !displayName.trim()) return;
