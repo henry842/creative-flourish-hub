@@ -151,13 +151,13 @@ export default function Dashboard() {
     setLatestByAssetId(latestByAssetIdMap);
 
     const ranked = assets
-      .filter((a) => latestByAssetId[a.id])
+      .filter((a) => latestByAssetIdMap[a.id])
       .map((a) => ({
         id: a.id,
         name: a.name,
         ticker: a.ticker,
-        score: latestByAssetId[a.id].score,
-        sentiment: latestByAssetId[a.id].sentiment,
+        score: latestByAssetIdMap[a.id].score,
+        sentiment: latestByAssetIdMap[a.id].sentiment,
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
@@ -165,8 +165,8 @@ export default function Dashboard() {
 
     // Portfolio health
     const assetScores = assets
-      .filter((a) => latestByAssetId[a.id])
-      .map((a) => latestByAssetId[a.id].score);
+      .filter((a) => latestByAssetIdMap[a.id])
+      .map((a) => latestByAssetIdMap[a.id].score);
 
     if (assetScores.length > 0) {
       const avgScore = Math.round(assetScores.reduce((a, b) => a + b, 0) / assetScores.length);
