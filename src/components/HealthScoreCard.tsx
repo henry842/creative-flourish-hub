@@ -136,8 +136,11 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
 
           {/* Category Bars */}
           <div className="space-y-3">
-            {categories.map(({ key, label, tooltip }) => {
+            {categories.map(({ key, label, tooltip, inverted }) => {
               const val = score[key];
+              const colorFn = inverted ? scoreColorInverted : scoreColor;
+              const bgFn = inverted ? scoreBgInverted : scoreBg;
+              const emojiFn = inverted ? scoreEmojiInverted : scoreEmoji;
               return (
                 <div key={key} className="space-y-1">
                   <div className="flex justify-between text-sm">
@@ -145,13 +148,13 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
                       {label}
                       <InfoTooltip text={tooltip} />
                     </span>
-                    <span className={`font-medium ${scoreColor(val)}`}>
-                      {val}/100 {scoreEmoji(val)}
+                    <span className={`font-medium ${colorFn(val)}`}>
+                      {val}/100 {emojiFn(val)}
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-700 ${scoreBg(val)}`}
+                      className={`h-full rounded-full transition-all duration-700 ${bgFn(val)}`}
                       style={{ width: `${val}%` }}
                     />
                   </div>
