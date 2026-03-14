@@ -405,25 +405,27 @@ export default function Sentiment() {
           {sentimentEvolution.length > 1 && (
             <Card className="glass">
               <CardHeader className="pb-2">
-                <CardTitle className="font-display text-lg">Evolução do Sentimento</CardTitle>
-                <p className="text-xs text-muted-foreground">% de análises bullish vs bearish ao longo do tempo</p>
+                <CardTitle className="font-display text-lg" id="evolution-chart-title">Evolução do Sentimento</CardTitle>
+                <p className="text-xs text-muted-foreground" id="evolution-chart-desc">Percentual de análises bullish vs bearish ao longo do tempo</p>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <AreaChart data={sentimentEvolution}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" fontSize={11} stroke="hsl(var(--muted-foreground))" />
-                    <YAxis domain={[0, 100]} fontSize={11} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${v}%`} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)", fontSize: 12 }}
-                      formatter={(value: number, name: string) => [`${value}%`, name === "bullish" ? "Bullish" : name === "bearish" ? "Bearish" : "Neutro"]}
-                    />
-                    <Legend formatter={(value) => value === "bullish" ? "Bullish" : value === "bearish" ? "Bearish" : "Neutro"} />
-                    <Area type="monotone" dataKey="bullish" stackId="1" stroke="hsl(var(--bullish))" fill="hsl(var(--bullish))" fillOpacity={0.3} />
-                    <Area type="monotone" dataKey="neutral" stackId="1" stroke="hsl(var(--neutral))" fill="hsl(var(--neutral))" fillOpacity={0.2} />
-                    <Area type="monotone" dataKey="bearish" stackId="1" stroke="hsl(var(--bearish))" fill="hsl(var(--bearish))" fillOpacity={0.3} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div role="img" aria-labelledby="evolution-chart-title" aria-describedby="evolution-chart-desc">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <AreaChart data={sentimentEvolution}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" fontSize={11} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis domain={[0, 100]} fontSize={11} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${v}%`} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "var(--radius)", fontSize: 12 }}
+                        formatter={(value: number, name: string) => [`${value}%`, name === "bullish" ? "Bullish" : name === "bearish" ? "Bearish" : "Neutro"]}
+                      />
+                      <Legend formatter={(value) => value === "bullish" ? "Bullish" : value === "bearish" ? "Bearish" : "Neutro"} />
+                      <Area type="monotone" dataKey="bullish" stackId="1" stroke="hsl(var(--bullish))" fill="hsl(var(--bullish))" fillOpacity={0.3} />
+                      <Area type="monotone" dataKey="neutral" stackId="1" stroke="hsl(var(--neutral))" fill="hsl(var(--neutral))" fillOpacity={0.2} />
+                      <Area type="monotone" dataKey="bearish" stackId="1" stroke="hsl(var(--bearish))" fill="hsl(var(--bearish))" fillOpacity={0.3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           )}
