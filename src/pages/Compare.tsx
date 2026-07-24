@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -316,20 +317,18 @@ Vencedor: ${winner || "Empate"} (${Object.entries(wins).map(([t, c]) => `${t}: $
 
   return (
     <div className="space-y-6" ref={printRef}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-            <Swords className="h-8 w-8 text-primary" />
-            Modo Batalha
-          </h1>
-          <p className="text-muted-foreground mt-1">Compare {showThird ? "até 3" : "duas"} empresas lado a lado</p>
-        </div>
-        {isReady && (
-          <Button variant="outline" size="sm" onClick={exportPDF} className="gap-2">
-            <Download className="h-4 w-4" /> Exportar PDF
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        icon={Swords}
+        title="Modo Batalha"
+        subtitle={`Compare ${showThird ? "até 3" : "duas"} empresas lado a lado`}
+        action={
+          isReady && (
+            <Button variant="outline" size="sm" onClick={exportPDF} className="gap-2">
+              <Download className="h-4 w-4" /> Exportar PDF
+            </Button>
+          )
+        }
+      />
 
       {/* Ticker selectors */}
       <div className={`grid gap-4 ${showThird ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -267,19 +268,16 @@ ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentim
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold flex items-center gap-3">
-            <Trophy className="h-8 w-8 text-primary" /> Ranking de Empresas
-          </h1>
-          <p className="text-muted-foreground mt-1">Leaderboard das empresas analisadas por Health Score</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        icon={Trophy}
+        title="Ranking de empresas"
+        subtitle="Suas empresas analisadas, ordenadas por Health Score"
+        action={
           <Button variant="outline" size="sm" onClick={exportCSV} className="gap-2" disabled={filteredCompanies.length === 0}>
             <Download className="h-4 w-4" /> Exportar CSV
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">

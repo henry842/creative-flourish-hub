@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { maskEmail } from "@/lib/security";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -178,10 +179,11 @@ export default function Profile() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="font-display text-3xl font-bold">Perfil</h1>
-        <p className="text-muted-foreground mt-1">Gerencie sua conta</p>
-      </div>
+      <PageHeader
+        icon={UserCircle}
+        title="Perfil"
+        subtitle="Gerencie sua conta"
+      />
 
       {/* Display name */}
       <Card className="glass">

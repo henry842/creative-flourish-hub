@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -288,10 +289,11 @@ export default function Sentiment() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-bold">Análise de Sentimento</h1>
-        <p className="text-muted-foreground mt-1">Sentimento dos seus documentos financeiros</p>
-      </div>
+      <PageHeader
+        icon={TrendingUp}
+        title="Análise de sentimento"
+        subtitle="Sentimento dos seus documentos financeiros"
+      />
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

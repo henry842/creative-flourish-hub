@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -219,14 +220,11 @@ export default function Briefing() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-          <Bell className="h-7 w-7 text-primary" /> Briefing Diário
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Receba um resumo financeiro personalizado todos os dias com notícias reais e dados dos seus ativos.
-        </p>
-      </div>
+      <PageHeader
+        icon={Bell}
+        title="Briefing diário"
+        subtitle="Um resumo financeiro personalizado todos os dias, com notícias e dados dos seus ativos."
+      />
 
       {/* Configuration Section */}
       <Card className="glass">
