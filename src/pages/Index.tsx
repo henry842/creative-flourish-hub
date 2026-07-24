@@ -249,7 +249,7 @@ export default function Dashboard() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [user]);
+  useEffect(() => { fetchData().catch(() => setLoading(false)); }, [user]);
 
   const removeFromWatchlist = async (id: string) => {
     await supabase.from("watchlist").delete().eq("id", id);

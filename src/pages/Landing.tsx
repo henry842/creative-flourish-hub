@@ -318,36 +318,6 @@ const docTypes = [
   "Balanços patrimoniais",
 ];
 
-const plans = [
-  {
-    name: "Free",
-    price: "R$ 0",
-    period: "para sempre",
-    desc: "Para conhecer o produto.",
-    cta: "Começar grátis",
-    features: ["3 análises por mês", "Chat com limite", "Health Score básico", "1 ativo no portfólio"],
-    highlight: false,
-  },
-  {
-    name: "Pro",
-    price: "R$ 49",
-    period: "por mês",
-    desc: "Para o investidor ativo.",
-    cta: "Assinar o Pro",
-    features: ["Análises ilimitadas", "Chat ilimitado", "Health Score completo", "Modo Batalha e Ranking", "Briefing diário"],
-    highlight: true,
-  },
-  {
-    name: "Enterprise",
-    price: "R$ 199",
-    period: "por mês",
-    desc: "Para times e gestoras.",
-    cta: "Falar com vendas",
-    features: ["Tudo do Pro", "Multiusuário", "API de integração", "Alertas avançados", "Suporte prioritário"],
-    highlight: false,
-  },
-];
-
 const faqs = [
   {
     q: "Funciona com qualquer PDF financeiro?",
@@ -400,7 +370,6 @@ export default function Landing() {
           </button>
           <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
             <a href="#produto" className="hover:text-foreground transition-colors">Produto</a>
-            <a href="#planos" className="hover:text-foreground transition-colors">Planos</a>
             <a href="#duvidas" className="hover:text-foreground transition-colors">Dúvidas</a>
           </nav>
           <div className="flex items-center gap-2">
@@ -545,51 +514,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* PRICING */}
-      <section id="planos" className="border-t border-border bg-secondary/40">
-        <div className="mx-auto max-w-6xl px-5 sm:px-6 py-16 sm:py-24">
-          <div className="max-w-2xl">
-            <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">Planos simples</h2>
-            <p className="mt-4 text-muted-foreground text-lg">Comece de graça. Evolua quando fizer sentido.</p>
-          </div>
-          <div className="mt-12 grid md:grid-cols-3 gap-5 items-start">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`surface rounded-2xl p-6 ${plan.highlight ? "ring-2 ring-primary relative" : ""}`}
-              >
-                {plan.highlight && (
-                  <span className="absolute -top-3 left-6 rounded-full bg-accent text-accent-foreground text-xs font-medium px-3 py-1">
-                    Mais escolhido
-                  </span>
-                )}
-                <h3 className="font-display text-lg font-semibold">{plan.name}</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">{plan.desc}</p>
-                <div className="mt-5 flex items-baseline gap-1.5">
-                  <span className="data text-4xl font-semibold tracking-tight">{plan.price}</span>
-                  <span className="text-sm text-muted-foreground">/ {plan.period}</span>
-                </div>
-                <Button
-                  className="w-full mt-5"
-                  variant={plan.highlight ? "default" : "outline"}
-                  onClick={() => navigate("/")}
-                >
-                  {plan.cta}
-                </Button>
-                <ul className="mt-6 space-y-3">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* FAQ */}
       <section id="duvidas" className="mx-auto max-w-3xl px-5 sm:px-6 py-16 sm:py-24">
         <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-center">Perguntas frequentes</h2>
@@ -638,7 +562,6 @@ export default function Landing() {
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <a href="#produto" className="hover:text-foreground transition-colors">Produto</a>
-              <a href="#planos" className="hover:text-foreground transition-colors">Planos</a>
               <a href="#duvidas" className="hover:text-foreground transition-colors">Dúvidas</a>
               <button onClick={() => navigate("/")} className="hover:text-foreground transition-colors">Entrar</button>
             </div>

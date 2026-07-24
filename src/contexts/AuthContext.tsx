@@ -18,9 +18,21 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+// Fallback identity so the app always opens, even when Supabase anonymous sign-in is
+// unavailable (disabled or project asleep). Read-only: RLS blocks writes without a
+// real session, but every screen stays navigable.
+const GUEST_USER = {
+  id: "00000000-0000-0000-0000-000000000000",
+  aud: "guest",
+  app_metadata: {},
+  user_metadata: {},
+  created_at: new Date().toISOString(),
+} as unknown as User;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [guest, setGuest] = useState(false);
 
   useEffect(() => {
     // Keep the session in sync (token refresh, sign-out, etc.). Don't flip `loading`
@@ -43,8 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
       } else {
         const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) console.warn("Login anônimo indisponível:", error.message);
-        setSession(data?.session ?? null);
+        if (error || !data?.session) {
+          console.warn("Login anônimo indisponível — abrindo em modo somente leitura.", error?.message ?? "");
+          setGuest(true);
+        } else {
+          setSession(data.session);
+        }
       }
       setLoading(false);
     })();
@@ -57,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? (guest ? GUEST_USER : null), loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
