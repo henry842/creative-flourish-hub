@@ -53,15 +53,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
-  if (!user) return <Navigate to="/landing" replace />;
+  if (!user) return <Navigate to="/" replace />;
   return <AppLayout><SessionGuard /><OnboardingModal />{children}</AppLayout>;
-}
-
-function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
-  return <>{children}</>;
 }
 
 const App = () => (
@@ -74,10 +67,11 @@ const App = () => (
             <Sonner />
             <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || "/"}>
               <Routes>
-                <Route path="/landing" element={<LazyPage><Landing /></LazyPage>} />
-                <Route path="/auth" element={<PublicRoute><LazyPage><Auth /></LazyPage></PublicRoute>} />
+                <Route path="/" element={<LazyPage><Landing /></LazyPage>} />
+                <Route path="/landing" element={<Navigate to="/" replace />} />
+                <Route path="/auth" element={<LazyPage><Auth /></LazyPage>} />
                 <Route path="/reset-password" element={<LazyPage><ResetPassword /></LazyPage>} />
-                <Route path="/" element={<ProtectedRoute><LazyPage><Dashboard /></LazyPage></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><LazyPage><Dashboard /></LazyPage></ProtectedRoute>} />
                 <Route path="/documents" element={<ProtectedRoute><Navigate to="/assets" replace /></ProtectedRoute>} />
                 <Route path="/chat" element={<ProtectedRoute><LazyPage><Chat /></LazyPage></ProtectedRoute>} />
                 <Route path="/sentiment" element={<ProtectedRoute><LazyPage><Sentiment /></LazyPage></ProtectedRoute>} />

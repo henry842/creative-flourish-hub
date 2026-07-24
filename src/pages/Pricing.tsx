@@ -66,7 +66,7 @@ export default function Pricing() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
         <div className="relative max-w-5xl mx-auto px-6 py-16 text-center">
-          <Button variant="ghost" onClick={() => navigate("/landing")} className="mb-8 text-muted-foreground">
+          <Button variant="ghost" onClick={() => navigate("/")} className="mb-8 text-muted-foreground">
             ← Voltar
           </Button>
           <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
@@ -115,7 +115,7 @@ export default function Pricing() {
                 <Button
                   onClick={() => {
                     if (plan.name === "Free") {
-                      navigate("/");
+                      navigate("/dashboard");
                     } else {
                       window.open("https://wa.me/5571992683093?text=" + encodeURIComponent(`Olá! Tenho interesse no plano ${plan.name} do FinSight.`), "_blank");
                     }

@@ -365,7 +365,7 @@ export default function Landing() {
         }`}
       >
         <div className="mx-auto max-w-6xl px-5 sm:px-6 h-16 flex items-center justify-between">
-          <button onClick={() => navigate("/landing")} className="text-foreground" aria-label="FinSight — início">
+          <button onClick={() => navigate("/")} className="text-foreground" aria-label="FinSight — início">
             <Wordmark />
           </button>
           <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
@@ -373,11 +373,11 @@ export default function Landing() {
             <a href="#duvidas" className="hover:text-foreground transition-colors">Dúvidas</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="hidden sm:inline-flex">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/auth")} className="hidden sm:inline-flex">
               Entrar
             </Button>
-            <Button size="sm" onClick={() => navigate("/")}>
-              Começar grátis
+            <Button size="sm" onClick={() => navigate("/dashboard")}>
+              Ir para o dashboard
             </Button>
           </div>
         </div>
@@ -403,18 +403,18 @@ export default function Landing() {
               <div className="mt-9 flex flex-col sm:flex-row gap-3">
                 <Button
                   size="lg"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/dashboard")}
                   className="h-12 px-7 text-base bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
                 >
-                  Analisar meu primeiro PDF <ArrowRight className="h-4 w-4" />
+                  Ir para o dashboard <ArrowRight className="h-4 w-4" />
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  onClick={() => document.getElementById("produto")?.scrollIntoView({ behavior: "smooth" })}
+                  onClick={() => navigate("/auth")}
                   className="h-12 px-7 text-base bg-transparent border-brand-foreground/25 text-brand-foreground hover:bg-brand-foreground/10 hover:text-brand-foreground"
                 >
-                  Ver como funciona
+                  Salvar meus dados
                 </Button>
               </div>
               <p className="mt-5 text-sm text-brand-foreground/55">
@@ -538,14 +538,14 @@ export default function Landing() {
             O próximo relatório não precisa tomar sua tarde
           </h2>
           <p className="mt-5 text-lg text-brand-foreground/75 max-w-xl mx-auto">
-            Crie sua conta e analise o primeiro documento em menos de um minuto.
+            Abra o dashboard e analise o primeiro documento em menos de um minuto.
           </p>
           <Button
             size="lg"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
             className="mt-9 h-12 px-8 text-base bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
           >
-            Começar grátis <ArrowRight className="h-4 w-4" />
+            Ir para o dashboard <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       </section>
@@ -563,7 +563,7 @@ export default function Landing() {
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <a href="#produto" className="hover:text-foreground transition-colors">Produto</a>
               <a href="#duvidas" className="hover:text-foreground transition-colors">Dúvidas</a>
-              <button onClick={() => navigate("/")} className="hover:text-foreground transition-colors">Entrar</button>
+              <button onClick={() => navigate("/auth")} className="hover:text-foreground transition-colors">Entrar</button>
             </div>
           </div>
           <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

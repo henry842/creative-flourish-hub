@@ -30,7 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { title: "Visão geral", url: "/", icon: LayoutDashboard },
+  { title: "Visão geral", url: "/dashboard", icon: LayoutDashboard },
   { title: "Meus ativos", url: "/assets", icon: FolderOpen },
   { title: "Chat", url: "/chat", icon: MessageSquare },
   { title: "Sentimento", url: "/sentiment", icon: TrendingUp },
@@ -50,7 +50,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-3">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")}
           className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sidebar-primary hover:bg-sidebar-accent/60 transition-colors"
           aria-label="FinSight — visão geral"
         >
@@ -73,7 +73,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
-                      end={item.url === "/"}
+                      end={item.url === "/dashboard"}
                       className="text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground rounded-lg h-9"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >

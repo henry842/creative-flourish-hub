@@ -32,18 +32,32 @@ export default function Auth() {
       } else if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate("/");
+        navigate("/dashboard");
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
+        // "Salvar meus dados": if the visitor is browsing anonymously, upgrade that same
+        // session to a permanent account so the data they created is preserved.
+        const { data: { user: current } } = await supabase.auth.getUser();
+        if (current?.is_anonymous) {
+          const { error } = await supabase.auth.updateUser({
+            email,
+            password,
             data: { display_name: displayName },
-            emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
-          },
-        });
-        if (error) throw error;
-        toast({ title: "Conta criada!", description: "Verifique seu email para confirmar." });
+          });
+          if (error) throw error;
+          toast({ title: "Dados salvos!", description: "Confirme pelo link enviado ao seu email." });
+          navigate("/dashboard");
+        } else {
+          const { error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { display_name: displayName },
+              emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
+            },
+          });
+          if (error) throw error;
+          toast({ title: "Conta criada!", description: "Verifique seu email para confirmar." });
+        }
       }
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -57,7 +71,7 @@ export default function Auth() {
     ? "Enviaremos um link para redefinir sua senha."
     : isLogin
     ? "Bom te ver de novo."
-    : "Grátis para começar — sem cartão.";
+    : "Crie uma conta para salvar seus dados entre dispositivos.";
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
@@ -100,7 +114,7 @@ export default function Auth() {
       <div className="flex flex-col p-6 sm:p-10">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => navigate("/landing")}
+            onClick={() => navigate("/")}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" /> Início
