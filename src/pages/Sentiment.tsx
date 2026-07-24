@@ -219,7 +219,7 @@ export default function Sentiment() {
     } else {
       await supabase.from("watchlist").insert({ user_id: user.id, ticker: tickerName });
       setWatchlistTickers((prev) => new Set(prev).add(tickerName));
-      toast({ title: `${tickerName} adicionado à watchlist ⭐` });
+      toast({ title: `${tickerName} adicionado à watchlist` });
     }
   };
 
@@ -229,7 +229,7 @@ export default function Sentiment() {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       setAnalyses((prev) => prev.filter((a) => a.id !== id));
-      toast({ title: "Análise removida ✅" });
+      toast({ title: "Análise removida" });
     }
   };
 
@@ -262,7 +262,7 @@ export default function Sentiment() {
     a.download = `sentimento-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "CSV exportado! 📥" });
+    toast({ title: "CSV exportado!" });
   };
 
   // Health score for expanded row
@@ -394,7 +394,7 @@ export default function Sentiment() {
                   <p className={`text-lg font-bold font-display ${
                     momentum === "positive" ? "text-bullish" : momentum === "negative" ? "text-bearish" : "text-muted-foreground"
                   }`}>
-                    {momentum === "positive" ? "📈 Positivo" : momentum === "negative" ? "📉 Negativo" : "➡️ Estável"}
+                    {momentum === "positive" ? "Positivo" : momentum === "negative" ? "Negativo" : "Estável"}
                   </p>
                 </div>
               </CardContent>
@@ -464,7 +464,7 @@ export default function Sentiment() {
           {/* Hint for comparison */}
           {selectedTickers.size === 1 && (
             <p className="text-xs text-muted-foreground text-center">
-              💡 Segure <kbd className="px-1.5 py-0.5 rounded bg-muted text-foreground text-[10px] font-mono">Ctrl</kbd> e clique em outro ticker para comparar
+              Segure <kbd className="px-1.5 py-0.5 rounded bg-muted text-foreground text-[10px] font-mono">Ctrl</kbd> e clique em outro ticker para comparar
             </p>
           )}
 

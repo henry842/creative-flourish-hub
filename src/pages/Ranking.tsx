@@ -56,8 +56,8 @@ const SUB_CATEGORIES = [
 ];
 
 const CHART_COLORS = [
-  "hsl(217, 91%, 60%)", "hsl(160, 84%, 39%)", "hsl(45, 93%, 47%)",
-  "hsl(280, 70%, 60%)", "hsl(0, 84%, 60%)", "hsl(190, 80%, 50%)",
+  "hsl(246 44% 42%)", "hsl(16 74% 54%)", "hsl(152 44% 40%)",
+  "hsl(38 78% 50%)", "hsl(268 42% 55%)", "hsl(194 52% 42%)",
   "hsl(330, 70%, 55%)", "hsl(100, 60%, 45%)",
 ];
 
@@ -286,9 +286,9 @@ ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentim
         <div className="flex gap-1">
           {[
             { value: "all", label: "Todos" },
-            { value: "bullish", label: "📈 Bullish" },
-            { value: "bearish", label: "📉 Bearish" },
-            { value: "neutral", label: "➡️ Neutro" },
+            { value: "bullish", label: "Bullish" },
+            { value: "bearish", label: "Bearish" },
+            { value: "neutral", label: "Neutro" },
           ].map((f) => (
             <Button
               key={f.value}
@@ -524,7 +524,7 @@ ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentim
                           <ul className="space-y-1.5">
                             {company.red_flags.map((f, fi) => (
                               <li key={fi} className="text-xs text-bearish/80 bg-bearish/10 rounded px-3 py-2 leading-relaxed">
-                                🚩 {f}
+                                {f}
                               </li>
                             ))}
                           </ul>

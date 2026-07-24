@@ -45,7 +45,14 @@ function LazyPage({ children }: { children: React.ReactNode }) {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-display text-xl">FinSight AI</div></div>;
+  if (loading) return (
+    <div className="min-h-screen grid place-items-center bg-background">
+      <div className="flex items-center gap-2.5">
+        <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+        <span className="wordmark text-lg text-foreground">FinSight</span>
+      </div>
+    </div>
+  );
   if (!user) return <Navigate to="/landing" replace />;
   return <AppLayout><SessionGuard /><OnboardingModal />{children}</AppLayout>;
 }
@@ -65,7 +72,7 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
+            <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || "/"}>
               <Routes>
                 <Route path="/landing" element={<LazyPage><Landing /></LazyPage>} />
                 <Route path="/auth" element={<PublicRoute><LazyPage><Auth /></LazyPage></PublicRoute>} />

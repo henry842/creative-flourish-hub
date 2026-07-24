@@ -3,27 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co https://*.lovableproject.com https://*.lovable.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.groq.com https://ai.gateway.lovable.dev https://*.lovableproject.com https://*.lovable.app https://cdn.gpteng.co; frame-ancestors 'self' https://*.lovable.app https://*.lovableproject.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.groq.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <title>FinSight AI — Inteligência Financeira com IA</title>
-    <meta name="description" content="Analise documentos financeiros, obtenha insights de mercado e análise de sentimento com inteligência artificial avançada.">
-    
-    
+    <meta name="theme-color" content="#2b2770" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#12101f" media="(prefers-color-scheme: dark)">
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+
+    <title>FinSight — Leia qualquer relatório financeiro em segundos</title>
+    <meta name="description" content="Envie um PDF financeiro — FII, 10-K, release de resultados ou informe CVM — e receba um Health Score de 0 a 100, red flags, preço-alvo e leitura de sentimento. Converse com os documentos, compare ativos e receba um briefing diário.">
+
     <meta property="og:type" content="website" />
-    
-  
-  
-  
-  <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0540d9f4-f8c0-40b7-9fdd-b9cad8104a57?Expires=1773532969&amp;GoogleAccessId=go-api-on-aws%40gpt-engineer-390607.iam.gserviceaccount.com&amp;Signature=Gv5NgBQhzXxHtlr3zCMnp3RpM7BYrQxVPG7DRaJ2baGFvjGHHa4cvyY9n6mmuvQixxHeH6DjGFb7bIfIJNjl5y8wQ1CdJZdYcj1RmK1DjnR4xc%2BqYihiHkHa6wAHAZHJXYziRgeYXcbTf7s5FvbV9XhrlP%2B9ZlCmCb%2F%2BtrmCAD1%2Fkc%2FU8mxy%2FV%2FHqZxNfGA8c03fnideGFmlZn92PXPCjasRVaN71%2F8Yj6R8t5766V2PydF4O8ZzH4MOknfeXA3r9FOWIYCdR%2Fl54tOjrlbrTfBU6gEnOlspPYI99jNHJKB1r%2FYcWZTrjdJItQJB6SYFixTGLfR3BqtTYxdclY1qyQ%3D%3D">
-  <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/0540d9f4-f8c0-40b7-9fdd-b9cad8104a57?Expires=1773532969&amp;GoogleAccessId=go-api-on-aws%40gpt-engineer-390607.iam.gserviceaccount.com&amp;Signature=Gv5NgBQhzXxHtlr3zCMnp3RpM7BYrQxVPG7DRaJ2baGFvjGHHa4cvyY9n6mmuvQixxHeH6DjGFb7bIfIJNjl5y8wQ1CdJZdYcj1RmK1DjnR4xc%2BqYihiHkHa6wAHAZHJXYziRgeYXcbTf7s5FvbV9XhrlP%2B9ZlCmCb%2F%2BtrmCAD1%2Fkc%2FU8mxy%2FV%2FHqZxNfGA8c03fnideGFmlZn92PXPCjasRVaN71%2F8Yj6R8t5766V2PydF4O8ZzH4MOknfeXA3r9FOWIYCdR%2Fl54tOjrlbrTfBU6gEnOlspPYI99jNHJKB1r%2FYcWZTrjdJItQJB6SYFixTGLfR3BqtTYxdclY1qyQ%3D%3D">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta property="og:title" content="FinSight AI — Inteligência Financeira com IA">
-  <meta name="twitter:title" content="FinSight AI — Inteligência Financeira com IA">
-  <meta property="og:description" content="Analise documentos financeiros, obtenha insights de mercado e análise de sentimento com inteligência artificial avançada.">
-  <meta name="twitter:description" content="Analise documentos financeiros, obtenha insights de mercado e análise de sentimento com inteligência artificial avançada.">
-</head>
+    <meta property="og:site_name" content="FinSight" />
+    <meta property="og:title" content="FinSight — Leia qualquer relatório financeiro em segundos" />
+    <meta property="og:description" content="Health Score, red flags, preço-alvo e chat sobre seus documentos financeiros. Análise clara, baseada nos dados reais do relatório." />
+    <meta property="og:image" content="%BASE_URL%og.png" />
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FinSight — Leia qualquer relatório financeiro em segundos">
+    <meta name="twitter:description" content="Health Score, red flags, preço-alvo e chat sobre seus documentos financeiros.">
+    <meta name="twitter:image" content="%BASE_URL%og.png">
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

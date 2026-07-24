@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { TrendingUp, Mail, Lock, User } from "lucide-react";
+import { Wordmark } from "@/components/Brand";
+import { Mail, Lock, User, ArrowLeft, Check } from "lucide-react";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -52,102 +52,162 @@ export default function Auth() {
     }
   };
 
+  const title = isForgot ? "Recuperar senha" : isLogin ? "Entrar na sua conta" : "Criar sua conta";
+  const subtitle = isForgot
+    ? "Enviaremos um link para redefinir sua senha."
+    : isLogin
+    ? "Bom te ver de novo."
+    : "Grátis para começar — sem cartão.";
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+      {/* brand panel */}
+      <div className="relative hidden lg:flex flex-col justify-between bg-brand text-brand-foreground p-12 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(hsl(var(--brand-foreground))_1px,transparent_1px),linear-gradient(90deg,hsl(var(--brand-foreground))_1px,transparent_1px)] [background-size:56px_56px]" />
+        <div className="relative text-brand-foreground">
+          <Wordmark
+            markClassName="h-8 w-8"
+            squareClass="fill-brand-foreground"
+            tickClass="stroke-brand"
+            dotClass="fill-accent"
+          />
+        </div>
+        <div className="relative max-w-md">
+          <p className="font-display text-3xl font-semibold leading-tight text-balance">
+            Um relatório de 50 páginas vira um veredito claro em segundos.
+          </p>
+          <ul className="mt-8 space-y-3 text-brand-foreground/80">
+            {[
+              "Health Score de 0 a 100 com cinco subcategorias",
+              "Red flags derivadas dos números do documento",
+              "Chat, comparação, ranking e briefing diário",
+            ].map((t) => (
+              <li key={t} className="flex items-start gap-3">
+                <span className="grid place-items-center h-5 w-5 rounded-full bg-accent/20 text-accent shrink-0 mt-0.5">
+                  <Check className="h-3 w-3" />
+                </span>
+                <span className="text-sm">{t}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="relative text-xs text-brand-foreground/50">
+          Ferramenta de análise — não constitui recomendação de investimento.
+        </p>
       </div>
 
-      <Card className="w-full max-w-md glass relative z-10">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <TrendingUp className="h-7 w-7 text-primary-foreground" />
+      {/* form panel */}
+      <div className="flex flex-col p-6 sm:p-10">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => navigate("/landing")}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Início
+          </button>
+          <div className="lg:hidden text-foreground">
+            <Wordmark markClassName="h-6 w-6" />
           </div>
-          <div>
-            <CardTitle className="font-display text-2xl">FinSight AI</CardTitle>
-            <CardDescription>
-              {isForgot ? "Recuperar senha" : isLogin ? "Entre na sua conta" : "Crie sua conta"}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleAuth} className="space-y-4">
-            {!isLogin && !isForgot && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="name"
-                    placeholder="Seu nome"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            {!isForgot && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            )}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Carregando..." : isForgot ? "Enviar link" : isLogin ? "Entrar" : "Criar conta"}
-            </Button>
-          </form>
+        </div>
 
-          <div className="mt-6 text-center text-sm space-y-2">
-            {!isForgot && (
-              <button
-                type="button"
-                onClick={() => setIsForgot(true)}
-                className="text-muted-foreground hover:text-primary transition-colors"
-              >
-                Esqueceu a senha?
-              </button>
-            )}
-            <div>
-              <button
-                type="button"
-                onClick={() => { setIsLogin(!isLogin); setIsForgot(false); }}
-                className="text-primary hover:underline"
-              >
-                {isLogin ? "Criar uma conta" : "Já tenho conta"}
-              </button>
+        <div className="flex-1 grid place-items-center">
+          <div className="w-full max-w-sm py-10">
+            <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p>
+
+            <form onSubmit={handleAuth} className="mt-8 space-y-4">
+              {!isLogin && !isForgot && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="name">Nome</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      placeholder="Seu nome"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="voce@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              {!isForgot && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Senha</Label>
+                    {isLogin && (
+                      <button
+                        type="button"
+                        onClick={() => setIsForgot(true)}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Esqueceu?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              )}
+              <Button type="submit" className="w-full h-11" disabled={loading}>
+                {loading ? "Aguarde…" : isForgot ? "Enviar link" : isLogin ? "Entrar" : "Criar conta"}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-sm text-muted-foreground">
+              {isForgot ? (
+                <button
+                  type="button"
+                  onClick={() => setIsForgot(false)}
+                  className="text-foreground font-medium hover:underline"
+                >
+                  Voltar ao login
+                </button>
+              ) : (
+                <span>
+                  {isLogin ? "Ainda não tem conta? " : "Já tem uma conta? "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLogin(!isLogin);
+                      setIsForgot(false);
+                    }}
+                    className="text-foreground font-medium hover:underline"
+                  >
+                    {isLogin ? "Criar conta" : "Entrar"}
+                  </button>
+                </span>
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

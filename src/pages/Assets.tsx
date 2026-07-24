@@ -107,7 +107,7 @@ export default function Assets() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Ativo criado ✅" });
+      toast({ title: "Ativo criado" });
       setShowCreate(false);
       setNewName(""); setNewTicker(""); setNewType("fii"); setNewDesc("");
       fetchAssets();

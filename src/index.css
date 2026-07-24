@@ -1,79 +1,108 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  FinSight design tokens — see DESIGN.md
+  World: warm porcelain canvas · deep indigo committed field · terracotta spark.
+  Fonts loaded via <link> in index.html (Bricolage Grotesque, Hanken Grotesk, JetBrains Mono).
+*/
+
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 25% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 220 25% 10%;
-    --muted: 220 14% 95%;
-    --muted-foreground: 220 10% 46%;
-    --accent: 160 84% 39%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 90%;
-    --input: 220 13% 90%;
-    --ring: 217 91% 60%;
+    --background: 36 22% 96%;
+    --foreground: 250 20% 13%;
+
+    --card: 40 30% 99%;
+    --card-foreground: 250 20% 13%;
+
+    --popover: 40 30% 99%;
+    --popover-foreground: 250 20% 13%;
+
+    --primary: 246 44% 34%;
+    --primary-foreground: 40 30% 97%;
+
+    /* committed brand field — stable across themes (hero, CTA bands, auth panel, spine) */
+    --brand: 246 44% 34%;
+    --brand-foreground: 40 30% 97%;
+
+    --secondary: 246 18% 92%;
+    --secondary-foreground: 250 22% 22%;
+
+    --muted: 38 16% 92%;
+    --muted-foreground: 250 8% 40%;
+
+    --accent: 16 74% 54%;
+    --accent-foreground: 40 30% 98%;
+
+    --destructive: 2 62% 50%;
+    --destructive-foreground: 40 30% 98%;
+
+    --border: 38 15% 87%;
+    --input: 38 15% 87%;
+    --ring: 246 44% 34%;
     --radius: 0.75rem;
 
-    --bullish: 160 84% 39%;
-    --bearish: 0 84% 60%;
-    --neutral: 45 93% 47%;
+    /* finance semantics — data only */
+    --bullish: 152 44% 36%;
+    --bearish: 2 62% 50%;
+    --neutral: 38 78% 46%;
 
-    --sidebar-background: 220 25% 10%;
-    --sidebar-foreground: 220 14% 80%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 16%;
-    --sidebar-accent-foreground: 220 14% 92%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 217 91% 60%;
+    /* indigo spine */
+    --sidebar-background: 248 40% 15%;
+    --sidebar-foreground: 246 18% 78%;
+    --sidebar-primary: 40 30% 96%;
+    --sidebar-primary-foreground: 248 40% 15%;
+    --sidebar-accent: 248 32% 22%;
+    --sidebar-accent-foreground: 40 30% 96%;
+    --sidebar-border: 248 28% 24%;
+    --sidebar-ring: 16 74% 58%;
   }
 
   .dark {
-    --background: 222 25% 8%;
-    --foreground: 220 14% 92%;
-    --card: 222 20% 12%;
-    --card-foreground: 220 14% 92%;
-    --popover: 222 20% 12%;
-    --popover-foreground: 220 14% 92%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 20% 16%;
-    --secondary-foreground: 220 14% 92%;
-    --muted: 220 20% 16%;
-    --muted-foreground: 220 10% 55%;
-    --accent: 160 84% 39%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 20% 18%;
-    --input: 220 20% 18%;
-    --ring: 217 91% 60%;
+    --background: 250 24% 9%;
+    --foreground: 40 22% 92%;
 
-    --bullish: 160 84% 39%;
-    --bearish: 0 72% 51%;
-    --neutral: 45 93% 47%;
+    --card: 250 20% 12%;
+    --card-foreground: 40 22% 92%;
 
-    --sidebar-background: 222 30% 6%;
-    --sidebar-foreground: 220 14% 75%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 25% 12%;
-    --sidebar-accent-foreground: 220 14% 92%;
-    --sidebar-border: 222 25% 14%;
-    --sidebar-ring: 217 91% 60%;
+    --popover: 250 22% 12%;
+    --popover-foreground: 40 22% 92%;
+
+    --primary: 251 62% 70%;
+    --primary-foreground: 250 34% 11%;
+
+    --brand: 247 46% 33%;
+    --brand-foreground: 40 28% 95%;
+
+    --secondary: 250 16% 18%;
+    --secondary-foreground: 40 22% 92%;
+
+    --muted: 250 14% 17%;
+    --muted-foreground: 250 10% 62%;
+
+    --accent: 16 78% 61%;
+    --accent-foreground: 250 34% 11%;
+
+    --destructive: 2 66% 61%;
+    --destructive-foreground: 40 22% 96%;
+
+    --border: 250 15% 20%;
+    --input: 250 15% 22%;
+    --ring: 251 62% 70%;
+
+    --bullish: 152 50% 52%;
+    --bearish: 2 72% 64%;
+    --neutral: 40 86% 60%;
+
+    --sidebar-background: 252 32% 8%;
+    --sidebar-foreground: 246 16% 74%;
+    --sidebar-primary: 40 28% 94%;
+    --sidebar-primary-foreground: 252 40% 10%;
+    --sidebar-accent: 250 24% 17%;
+    --sidebar-accent-foreground: 40 28% 94%;
+    --sidebar-border: 250 22% 18%;
+    --sidebar-ring: 16 78% 61%;
   }
 }
 
@@ -81,22 +110,112 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground font-sans;
-    font-family: 'Inter', sans-serif;
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: "Bricolage Grotesque", "Hanken Grotesk", system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  /* tabular figures wherever numbers are compared */
+  .tnum, th, td, table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.18);
+  }
+
+  /* quiet, warm scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border: 3px solid hsl(var(--background));
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
+}
+
+@layer components {
+  /*
+    .glass is intentionally NOT glassmorphism anymore. It's a calm, solid surface with a
+    hairline border and a soft *offset* shadow. Every legacy consumer inherits the upgrade.
+  */
+  .surface,
+  .glass {
+    @apply bg-card border border-border/70;
+    box-shadow:
+      0 1px 2px hsl(250 20% 13% / 0.04),
+      0 12px 28px -18px hsl(250 30% 20% / 0.18);
+  }
+
+  .surface-muted {
+    @apply bg-muted/40 border border-border/60;
+  }
+
+  /* wordmark / brand emphasis — solid brand color, never a gradient */
+  .wordmark {
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  /* mono for real financial data only */
+  .data {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "zero";
   }
 }
 
 @layer utilities {
-  .glass {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50;
-  }
+  /* legacy .gradient-text usages resolve to a solid brand color — gradient text is banned */
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+    @apply text-primary;
   }
+
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  /* one authored entrance, opt-in, honoring reduced motion */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal.in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .reveal { opacity: 1 !important; transform: none !important; }
 }
 
 @media print {

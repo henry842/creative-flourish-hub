@@ -197,7 +197,7 @@ export default function Dashboard() {
       activityItems.push({
         id: `sent-${s.id}`,
         type: "analysis",
-        description: `Análise de sentimento${s.ticker ? `: ${s.ticker}` : ""} → ${s.sentiment === "bullish" ? "🟢 Bullish" : s.sentiment === "bearish" ? "🔴 Bearish" : "🟡 Neutro"}`,
+        description: `Análise de sentimento${s.ticker ? `: ${s.ticker}` : ""} → ${s.sentiment === "bullish" ? "Bullish" : s.sentiment === "bearish" ? "Bearish" : "Neutro"}`,
         created_at: s.created_at,
       });
     });
@@ -275,7 +275,7 @@ export default function Dashboard() {
     } else {
       setWatchlist((prev) => [{ id: data.id, ticker: data.ticker }, ...prev]);
       setNewTicker("");
-      toast({ title: `${tickerUpper} adicionado à watchlist ⭐` });
+      toast({ title: `${tickerUpper} adicionado à watchlist` });
     }
     setAddingTicker(false);
   };
@@ -320,7 +320,9 @@ export default function Dashboard() {
         <Card className="glass max-w-2xl mx-auto">
           <CardContent className="py-12 space-y-8">
             <div className="text-center space-y-2">
-              <div className="text-5xl mb-4">🚀</div>
+              <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 grid place-items-center mb-4">
+                <Upload className="h-6 w-6 text-primary" />
+              </div>
               <h2 className="font-display text-2xl font-bold">Comece sua jornada</h2>
               <p className="text-muted-foreground">
                 Configure sua carteira em 3 passos simples e comece a receber análises inteligentes.
@@ -357,9 +359,9 @@ export default function Dashboard() {
   }
 
   const pieData = stats ? [
-    { name: "Bullish", value: stats.sentimentCounts.bullish, color: "hsl(160, 84%, 39%)" },
-    { name: "Bearish", value: stats.sentimentCounts.bearish, color: "hsl(0, 84%, 60%)" },
-    { name: "Neutral", value: stats.sentimentCounts.neutral, color: "hsl(45, 93%, 47%)" },
+    { name: "Bullish", value: stats.sentimentCounts.bullish, color: "hsl(var(--bullish))" },
+    { name: "Bearish", value: stats.sentimentCounts.bearish, color: "hsl(var(--bearish))" },
+    { name: "Neutral", value: stats.sentimentCounts.neutral, color: "hsl(var(--neutral))" },
   ].filter(d => d.value > 0) : [];
 
   const activityIcon = (type: string) => {
@@ -371,7 +373,6 @@ export default function Dashboard() {
     }
   };
 
-  const medalEmoji = (i: number) => i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉";
 
   const healthDiff = portfolioHealth?.prevAvgScore != null
     ? portfolioHealth.avgScore - portfolioHealth.prevAvgScore
@@ -483,8 +484,7 @@ export default function Dashboard() {
                         <ChevronDown className="h-4 w-4 text-bearish" />
                       )}
                       <span className={`text-sm font-medium ${healthDiff >= 0 ? "text-bullish" : "text-bearish"}`}>
-                        {healthDiff >= 0 ? "+" : ""}{healthDiff} pontos vs semana anterior
-                        {healthDiff >= 0 ? " ✅" : " ⚠️"}
+                        {healthDiff >= 0 ? "+" : ""}{healthDiff} pontos vs. semana anterior
                       </span>
                     </div>
                   )}
@@ -591,9 +591,16 @@ export default function Dashboard() {
                         </span>
                       )}
                       {w.lastSentiment && (
-                        <Badge variant="outline" className="text-xs">
-                          {w.lastSentiment === "bullish" ? "🟢" : w.lastSentiment === "bearish" ? "🔴" : "🟡"}
-                        </Badge>
+                        <span
+                          className={`h-2 w-2 rounded-full shrink-0 ${
+                            w.lastSentiment === "bullish"
+                              ? "bg-bullish"
+                              : w.lastSentiment === "bearish"
+                              ? "bg-bearish"
+                              : "bg-neutral"
+                          }`}
+                          title={w.lastSentiment}
+                        />
                       )}
                     </div>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFromWatchlist(w.id)}>
@@ -627,7 +634,9 @@ export default function Dashboard() {
                     className="flex items-center gap-4 rounded-lg bg-muted/50 px-4 py-3 cursor-pointer hover:bg-muted/80 transition-colors"
                     onClick={() => navigate(`/assets/${asset.id}`)}
                   >
-                    <span className="text-2xl">{medalEmoji(i)}</span>
+                    <span className="grid place-items-center h-8 w-8 rounded-full bg-primary/10 text-primary data text-sm font-semibold shrink-0">
+                      {i + 1}
+                    </span>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{asset.name}</p>
                       {asset.ticker && (
@@ -638,8 +647,17 @@ export default function Dashboard() {
                       <p className={`font-display font-bold text-lg ${scoreColor(asset.score)}`}>
                         {asset.score}
                       </p>
-                      <Badge variant="outline" className="text-xs">
-                        {asset.sentiment === "bullish" ? "🟢 Bullish" : asset.sentiment === "bearish" ? "🔴 Bearish" : "🟡 Neutro"}
+                      <Badge variant="outline" className="text-xs gap-1.5">
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            asset.sentiment === "bullish"
+                              ? "bg-bullish"
+                              : asset.sentiment === "bearish"
+                              ? "bg-bearish"
+                              : "bg-neutral"
+                          }`}
+                        />
+                        {asset.sentiment === "bullish" ? "Bullish" : asset.sentiment === "bearish" ? "Bearish" : "Neutro"}
                       </Badge>
                     </div>
                   </div>
@@ -709,9 +727,9 @@ export default function Dashboard() {
                       borderRadius: "var(--radius)",
                     }}
                   />
-                  <Area type="monotone" dataKey="bullish" stackId="1" stroke="hsl(160, 84%, 39%)" fill="hsl(160, 84%, 39%)" fillOpacity={0.3} />
-                  <Area type="monotone" dataKey="bearish" stackId="1" stroke="hsl(0, 84%, 60%)" fill="hsl(0, 84%, 60%)" fillOpacity={0.3} />
-                  <Area type="monotone" dataKey="neutral" stackId="1" stroke="hsl(45, 93%, 47%)" fill="hsl(45, 93%, 47%)" fillOpacity={0.3} />
+                  <Area type="monotone" dataKey="bullish" stackId="1" stroke="hsl(var(--bullish))" fill="hsl(var(--bullish))" fillOpacity={0.25} />
+                  <Area type="monotone" dataKey="bearish" stackId="1" stroke="hsl(var(--bearish))" fill="hsl(var(--bearish))" fillOpacity={0.25} />
+                  <Area type="monotone" dataKey="neutral" stackId="1" stroke="hsl(var(--neutral))" fill="hsl(var(--neutral))" fillOpacity={0.25} />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (

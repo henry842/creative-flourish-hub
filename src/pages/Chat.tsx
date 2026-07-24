@@ -220,7 +220,7 @@ export default function Chat() {
     const { error } = await supabase.from("conversations").update({ title: renameValue.trim() }).eq("id", convId);
     if (!error) {
       setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title: renameValue.trim() } : c)));
-      toast({ title: "Conversa renomeada ✅" });
+      toast({ title: "Conversa renomeada" });
     }
     setRenamingId(null);
   };
@@ -240,7 +240,7 @@ export default function Chat() {
 
   const copyMessage = (content: string) => {
     navigator.clipboard.writeText(content);
-    toast({ title: "Copiado! 📋" });
+    toast({ title: "Copiado!" });
   };
 
   const exportConversation = () => {
@@ -255,7 +255,7 @@ export default function Chat() {
     a.download = `chat-${conv?.title?.replace(/\s+/g, "-") || "export"}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "Conversa exportada! 📥" });
+    toast({ title: "Conversa exportada!" });
   };
 
   const buildDocumentContext = useCallback(() => {
@@ -383,7 +383,7 @@ export default function Chat() {
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="font-display flex items-center gap-2">📖 Glossário Financeiro</DialogTitle>
+              <DialogTitle className="font-display flex items-center gap-2">Glossário Financeiro</DialogTitle>
               <DialogDescription>Os 10 termos mais importantes</DialogDescription>
             </DialogHeader>
             <div className="space-y-3 mt-2">
@@ -595,7 +595,7 @@ export default function Chat() {
                 )}
 
                 <Bot className="h-16 w-16 mx-auto text-primary/50" />
-                <h2 className="font-display text-xl font-semibold">FinSight AI Chat</h2>
+                <h2 className="font-display text-xl font-semibold">FinSight Chat</h2>
                 <p className="text-muted-foreground">
                   Faça perguntas sobre seus documentos financeiros, analise relatórios e obtenha insights de mercado.
                 </p>
@@ -736,7 +736,7 @@ export default function Chat() {
                       variant="outline"
                       className="text-[10px] gap-1 border-primary/30 text-primary cursor-pointer hover:bg-primary/10"
                     >
-                      📄 {doc.ticker || doc.name.slice(0, 20)}
+                      {doc.ticker || doc.name.slice(0, 20)}
                       <X
                         className="h-2.5 w-2.5 ml-0.5"
                         onClick={() => toggleDocSelection(doc.id)}

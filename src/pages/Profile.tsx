@@ -108,7 +108,7 @@ export default function Profile() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Nome atualizado ✅" });
+      toast({ title: "Nome atualizado" });
     }
     setSaving(false);
   };
@@ -123,7 +123,7 @@ export default function Profile() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Prompt personalizado salvo ✅" });
+      toast({ title: "Prompt personalizado salvo" });
     }
     setSavingPrompt(false);
   };
@@ -142,7 +142,7 @@ export default function Profile() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Senha alterada ✅" });
+      toast({ title: "Senha alterada" });
       setNewPassword("");
       setConfirmPassword("");
     }
@@ -168,7 +168,7 @@ export default function Profile() {
         const err = await response.json();
         throw new Error(err.error || "Erro ao deletar conta");
       }
-      toast({ title: "Conta deletada. Até logo! 👋" });
+      toast({ title: "Conta deletada. Até logo!" });
       await signOut();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -290,7 +290,7 @@ export default function Profile() {
             {groqWarning && (
               <div className="flex items-center gap-2 text-xs text-neutral">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                <span>⚠️ Uso acima de 80% do limite diário! Considere reduzir operações.</span>
+                <span>Uso acima de 80% do limite diário! Considere reduzir operações.</span>
               </div>
             )}
           </div>
@@ -318,8 +318,8 @@ export default function Profile() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            💡 Briefings agora usam Groq (gratuito) em vez da Lovable AI. Análises de documentos e chat também usam Groq.
-            A Lovable AI é usada apenas para extração de PDFs por OCR (Gemini Vision).
+            Briefings, análises de documentos e chat rodam no Groq. A extração de texto de
+            PDFs escaneados usa OCR por visão computacional (Gemini Vision).
           </p>
         </CardContent>
       </Card>

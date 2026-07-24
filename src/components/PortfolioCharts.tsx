@@ -8,9 +8,9 @@ import {
 // Color palette for asset lines
 const ASSET_COLORS = [
   "hsl(217, 91%, 60%)",  // primary blue
-  "hsl(160, 84%, 39%)",  // bullish green
-  "hsl(0, 84%, 60%)",    // bearish red
-  "hsl(45, 93%, 47%)",   // neutral yellow
+  "hsl(var(--bullish))",  // bullish green
+  "hsl(var(--bearish))",    // bearish red
+  "hsl(var(--neutral))",   // neutral yellow
   "hsl(280, 70%, 55%)",  // purple
   "hsl(190, 80%, 45%)",  // teal
   "hsl(25, 90%, 55%)",   // orange
@@ -19,9 +19,9 @@ const ASSET_COLORS = [
 
 const TYPE_COLORS: Record<string, string> = {
   fii: "hsl(217, 91%, 60%)",
-  ação: "hsl(160, 84%, 39%)",
-  acao: "hsl(160, 84%, 39%)",
-  cripto: "hsl(45, 93%, 47%)",
+  ação: "hsl(var(--bullish))",
+  acao: "hsl(var(--bullish))",
+  cripto: "hsl(var(--neutral))",
   outro: "hsl(var(--muted-foreground))",
 };
 
@@ -130,7 +130,7 @@ function AssetComparisonChart({ assets, latestScores }: {
   }
 
   const sentimentColor = (s: string) =>
-    s === "bullish" ? "hsl(160, 84%, 39%)" : s === "bearish" ? "hsl(0, 84%, 60%)" : "hsl(45, 93%, 47%)";
+    s === "bullish" ? "hsl(var(--bullish))" : s === "bearish" ? "hsl(var(--bearish))" : "hsl(var(--neutral))";
 
   return (
     <ResponsiveContainer width="100%" height={250}>
@@ -230,8 +230,8 @@ function CumulativeScoreChart({ scores, assets }: { scores: ScoreHistoryItem[]; 
       <AreaChart data={data}>
         <defs>
           <linearGradient id="avgGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0.4} />
-            <stop offset="95%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0.05} />
+            <stop offset="5%" stopColor="hsl(var(--bullish))" stopOpacity={0.4} />
+            <stop offset="95%" stopColor="hsl(var(--bullish))" stopOpacity={0.05} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -248,7 +248,7 @@ function CumulativeScoreChart({ scores, assets }: { scores: ScoreHistoryItem[]; 
         <Area
           type="monotone"
           dataKey="avg"
-          stroke="hsl(160, 84%, 39%)"
+          stroke="hsl(var(--bullish))"
           strokeWidth={2}
           fill="url(#avgGradient)"
         />

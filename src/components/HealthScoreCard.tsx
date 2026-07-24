@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus, Shield, HelpCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Shield, HelpCircle, Target } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface HealthScore {
@@ -31,12 +31,6 @@ function scoreBg(score: number) {
   return "bg-bearish";
 }
 
-function scoreEmoji(score: number) {
-  if (score >= 80) return "🟢";
-  if (score >= 60) return "🟡";
-  return "🔴";
-}
-
 // For regulatory_risk, LOW = good (little risk), so colors are inverted
 function scoreColorInverted(score: number) {
   if (score <= 30) return "text-bullish";
@@ -48,12 +42,6 @@ function scoreBgInverted(score: number) {
   if (score <= 30) return "bg-bullish";
   if (score <= 60) return "bg-neutral";
   return "bg-bearish";
-}
-
-function scoreEmojiInverted(score: number) {
-  if (score <= 30) return "🟢";
-  if (score <= 60) return "🟡";
-  return "🔴";
 }
 
 const categories = [
@@ -94,8 +82,8 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
           <div className="flex items-center justify-between">
             <CardTitle className="font-display text-lg flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
-              Financial Health Score
-              <InfoTooltip text="Nota de 0-100 gerada pela IA baseada nos fundamentos do documento" />
+              Health Score
+              <InfoTooltip text="Nota de 0 a 100 baseada nos fundamentos extraídos do documento" />
             </CardTitle>
             {score.ticker && <Badge variant="secondary" className="font-mono">{score.ticker}</Badge>}
           </div>
@@ -119,7 +107,7 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
               </span>
             </div>
             <div className="flex-1">
-              <p className="text-sm text-muted-foreground mb-1">Score Geral {scoreEmoji(score.overall_score)}</p>
+              <p className="text-sm text-muted-foreground mb-1">Score geral</p>
               <div className="flex items-center gap-2">
                 <SentimentIcon className={`h-4 w-4 ${cfg.color}`} />
                 <span className={`text-sm font-medium ${cfg.color}`}>{cfg.label}</span>
@@ -140,7 +128,6 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
               const val = score[key];
               const colorFn = inverted ? scoreColorInverted : scoreColor;
               const bgFn = inverted ? scoreBgInverted : scoreBg;
-              const emojiFn = inverted ? scoreEmojiInverted : scoreEmoji;
               return (
                 <div key={key} className="space-y-1">
                   <div className="flex justify-between text-sm">
@@ -149,7 +136,7 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
                       <InfoTooltip text={tooltip} />
                     </span>
                     <span className={`font-medium ${colorFn(val)}`}>
-                      {val}/100 {emojiFn(val)}
+                      {val}/100
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -167,8 +154,10 @@ export function HealthScoreCard({ score }: { score: HealthScore }) {
           {score.price_target_low && score.price_target_high && score.price_target_low > 0 && score.price_target_high > 0 && (
             <div className="rounded-lg bg-muted/50 p-4 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">🎯 Price Target</span>
-                <InfoTooltip text="Faixa de preço estimada pela IA com base nos fundamentos" />
+                <span className="text-sm font-medium flex items-center gap-1.5">
+                  <Target className="h-4 w-4 text-primary" /> Preço-alvo
+                </span>
+                <InfoTooltip text="Faixa de preço estimada com base nos fundamentos do documento" />
                 <Badge variant="secondary" className="font-mono text-xs">
                   {score.price_target_low} – {score.price_target_high}
                 </Badge>

@@ -150,7 +150,7 @@ export default function AssetDetail() {
       status: "pending",
     } as any);
     if (dbErr) toast({ title: "Erro", description: dbErr.message, variant: "destructive" });
-    else { toast({ title: "Upload concluído! ✅" }); fetchData(); }
+    else { toast({ title: "Upload concluído!" }); fetchData(); }
     setUploading(false);
   };
 
@@ -165,7 +165,7 @@ export default function AssetDetail() {
         body: JSON.stringify({ document_id: doc.id, ticker: doc.ticker || asset?.ticker, asset_id: assetId }),
       });
       if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "Erro"); }
-      toast({ title: "Análise concluída! ✅" });
+      toast({ title: "Análise concluída!" });
       fetchData();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -402,7 +402,7 @@ export default function AssetDetail() {
                     </CardTitle>
                     {score.sentiment && (
                       <Badge variant="outline" className="text-xs">
-                        {score.sentiment === "bullish" ? "📈 Bullish" : score.sentiment === "bearish" ? "📉 Bearish" : "➡️ Neutro"}
+                        {score.sentiment === "bullish" ? "Bullish" : score.sentiment === "bearish" ? "Bearish" : "Neutro"}
                       </Badge>
                     )}
                   </div>
@@ -530,7 +530,7 @@ export default function AssetDetail() {
                                   className="absolute -bottom-3 right-2 h-6 w-6 bg-background shadow-sm opacity-0 group-hover/msg:opacity-100 transition-opacity"
                                   onClick={() => {
                                     navigator.clipboard.writeText(msg.content);
-                                    toast({ title: "Copiado! 📋" });
+                                    toast({ title: "Copiado!" });
                                   }}
                                   title="Copiar"
                                 >

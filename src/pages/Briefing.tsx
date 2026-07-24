@@ -130,7 +130,7 @@ export default function Briefing() {
         if (assetError) throw assetError;
       }
 
-      toast({ title: "Configuração salva! ✅" });
+      toast({ title: "Configuração salva!" });
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
     } finally {
@@ -152,7 +152,7 @@ export default function Briefing() {
 
       if (error) throw error;
 
-      toast({ title: "Briefing gerado com sucesso! 📊" });
+      toast({ title: "Briefing gerado com sucesso!" });
       // Refresh briefs list
       const { data: newBriefs } = await supabase
         .from("daily_briefs")
@@ -191,7 +191,7 @@ export default function Briefing() {
       if (error) throw error;
       setBriefs((prev) => prev.filter((b) => b.id !== briefId));
       if (expandedBriefId === briefId) setExpandedBriefId(null);
-      toast({ title: "Briefing removido ✅" });
+      toast({ title: "Briefing removido" });
     } catch (err: any) {
       toast({ title: "Erro ao remover", description: err.message, variant: "destructive" });
     }

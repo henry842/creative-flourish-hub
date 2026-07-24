@@ -68,7 +68,11 @@ async function extractTextWithGeminiVision(pdfBytes: Uint8Array, apiKey: string)
   console.log(`Using Gemini Vision for PDF text extraction (${pdfBytes.length} bytes)...`);
   const base64Pdf = base64Encode(pdfBytes);
 
-  const response = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  // OCR runs server-side only. Endpoint is configurable; falls back to the previously
+  // configured gateway so existing deployments keep working without a secret change.
+  const gatewayUrl = Deno.env.get("OCR_GATEWAY_URL") ?? "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+  const response = await fetchWithTimeout(gatewayUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -164,8 +168,8 @@ serve(async (req) => {
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const OCR_API_KEY = Deno.env.get("OCR_API_KEY") ?? Deno.env.get("LOVABLE_API_KEY");
+    if (!OCR_API_KEY) throw new Error("OCR_API_KEY is not configured");
 
     // Check/extract text
     let text = docRecord.extracted_text;
@@ -195,7 +199,7 @@ serve(async (req) => {
         text = basicText;
       } else {
         try {
-          text = await extractTextWithGeminiVision(pdfBytes, LOVABLE_API_KEY);
+          text = await extractTextWithGeminiVision(pdfBytes, OCR_API_KEY);
           if (!isTextReadable(text) || text.length < 100) {
             text = `[Não foi possível extrair texto legível do PDF "${docRecord.name}". Use o botão Editar para colar o texto manualmente.]`;
           }

@@ -117,7 +117,7 @@ export default function Pricing() {
                     if (plan.name === "Free") {
                       navigate("/auth");
                     } else {
-                      window.open("https://wa.me/5571992683093?text=" + encodeURIComponent(`Olá! Tenho interesse no plano ${plan.name} do FinSight AI.`), "_blank");
+                      window.open("https://wa.me/5571992683093?text=" + encodeURIComponent(`Olá! Tenho interesse no plano ${plan.name} do FinSight.`), "_blank");
                     }
                   }}
                   className="w-full font-display"
@@ -132,7 +132,7 @@ export default function Pricing() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} FinSight AI. Inteligência financeira para todos.</p>
+        <p>© {new Date().getFullYear()} FinSight. Inteligência financeira para todos.</p>
       </footer>
     </div>
   );

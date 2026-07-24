@@ -39,8 +39,8 @@ export function OnboardingModal() {
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl gradient-text">
-            Bem-vindo ao FinSight AI! 🚀
+          <DialogTitle className="font-display text-xl">
+            Bem-vindo ao FinSight
           </DialogTitle>
         </DialogHeader>
         <div className="py-6 text-center space-y-4">

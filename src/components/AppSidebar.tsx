@@ -1,29 +1,42 @@
-import { LayoutDashboard, MessageSquare, TrendingUp, Swords, Trophy, LogOut, Sun, Moon, UserCircle, FolderOpen, Bell } from "lucide-react";
+import {
+  LayoutDashboard,
+  MessageSquare,
+  TrendingUp,
+  Scale,
+  Trophy,
+  LogOut,
+  Sun,
+  Moon,
+  UserCircle,
+  FolderOpen,
+  Bell,
+} from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { GroqCreditCounter } from "@/components/GroqCreditCounter";
+import { LogoMark } from "@/components/Brand";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarHeader,
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Meus Ativos", url: "/assets", icon: FolderOpen },
-  { title: "Chat IA", url: "/chat", icon: MessageSquare },
+  { title: "Visão geral", url: "/", icon: LayoutDashboard },
+  { title: "Meus ativos", url: "/assets", icon: FolderOpen },
+  { title: "Chat", url: "/chat", icon: MessageSquare },
   { title: "Sentimento", url: "/sentiment", icon: TrendingUp },
-  { title: "Comparar", url: "/compare", icon: Swords },
+  { title: "Comparar", url: "/compare", icon: Scale },
   { title: "Ranking", url: "/ranking", icon: Trophy },
   { title: "Briefing", url: "/briefing", icon: Bell },
   { title: "Perfil", url: "/profile", icon: UserCircle },
@@ -32,34 +45,43 @@ const navItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarContent>
+      <SidebarHeader className="p-3">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sidebar-primary hover:bg-sidebar-accent/60 transition-colors"
+          aria-label="FinSight — visão geral"
+        >
+          <LogoMark
+            className="h-7 w-7"
+            squareClass="fill-sidebar-primary"
+            tickClass="stroke-sidebar-background"
+            dotClass="fill-sidebar-ring"
+          />
+          {!collapsed && <span className="wordmark text-lg text-sidebar-primary">FinSight</span>}
+        </button>
+      </SidebarHeader>
+
+      <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 py-4 cursor-pointer" onClick={() => navigate("/")}>
-            {!collapsed && (
-              <span className="font-display text-lg font-bold gradient-text">FinSight AI</span>
-            )}
-            {collapsed && <span className="font-display font-bold text-primary text-lg">F</span>}
-          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
-                      className="hover:bg-sidebar-accent/50 transition-colors"
+                      className="text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground rounded-lg h-9"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -68,25 +90,30 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-2 space-y-2">
-        {!collapsed && <GroqCreditCounter />}
+
+      <SidebarFooter className="p-2 gap-1">
+        {!collapsed && (
+          <div className="px-1 pb-1">
+            <GroqCreditCounter />
+          </div>
+        )}
         <Button
           variant="ghost"
           size={collapsed ? "icon" : "sm"}
           onClick={toggleTheme}
-          className="w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground"
+          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
         >
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          {!collapsed && <span className="ml-2">{theme === "dark" ? "Modo Claro" : "Modo Escuro"}</span>}
+          {!collapsed && <span className="ml-2 text-sm">{theme === "dark" ? "Tema claro" : "Tema escuro"}</span>}
         </Button>
         <Button
           variant="ghost"
           size={collapsed ? "icon" : "sm"}
           onClick={signOut}
-          className="w-full justify-start text-sidebar-foreground hover:text-destructive"
+          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-destructive"
         >
           <LogOut className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">Sair</span>}
+          {!collapsed && <span className="ml-2 text-sm">Sair</span>}
         </Button>
       </SidebarFooter>
     </Sidebar>

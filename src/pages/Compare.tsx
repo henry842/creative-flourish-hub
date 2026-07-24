@@ -43,7 +43,7 @@ const categories = [
   { key: "regulatory_risk" as const, label: "Risco Regulatório", short: "Risco" },
 ];
 
-const COLORS = ["hsl(217, 91%, 60%)", "hsl(160, 84%, 39%)", "hsl(45, 93%, 47%)"];
+const COLORS = ["hsl(246 44% 42%)", "hsl(16 74% 54%)", "hsl(152 44% 40%)"];
 
 function scoreColor(score: number) {
   if (score >= 80) return "text-bullish";
@@ -298,14 +298,14 @@ Vencedor: ${winner || "Empate"} (${Object.entries(wins).map(([t, c]) => `${t}: $
         .summary { background: #1e1e3a; padding: 16px; border-radius: 8px; margin-top: 16px; line-height: 1.6; white-space: pre-wrap; }
         @media print { body { background: white; color: black; } .flag { background: #fee; color: #c00; } .summary { background: #f0f0ff; } .winner { color: #16a34a; } }
       </style></head><body>
-      <h1>⚔️ Análise Comparativa</h1>
+      <h1>Análise Comparativa</h1>
       <p style="text-align:center;color:#888;">${selectedTickers.join(" vs ")} — ${new Date().toLocaleDateString("pt-BR")}</p>
-      <div class="winner">🏆 ${winner ? `${winner} vence ${Object.entries(wins).map(([t, c]) => `${t}: ${c}`).join(" × ")}` : "Empate!"}</div>
-      <h2>📊 Métricas por Categoria</h2>
+      <div class="winner">${winner ? `${winner} vence ${Object.entries(wins).map(([t, c]) => `${t}: ${c}`).join(" × ")}` : "Empate!"}</div>
+      <h2>Métricas por Categoria</h2>
       ${categories.map(({ key, label }) => `<div class="metric"><span>${label}</span><span>${selectedScores.map((s, i) => `${selectedTickers[i]}: ${s[key]}`).join(" | ")}</span></div>`).join("")}
-      <h2>🚩 Red Flags</h2>
+      <h2>Red Flags</h2>
       ${selectedTickers.map((t) => `<div><strong>${t}</strong> (${redFlagsMap[t]?.length || 0}):<div class="flags">${(redFlagsMap[t] || []).map((f) => `<span class="flag">${f}</span>`).join("") || "<span style='color:#888'>Nenhuma</span>"}</div></div>`).join("")}
-      ${aiSummary ? `<h2>🤖 Análise da IA</h2><div class="summary">${aiSummary}</div>` : ""}
+      ${aiSummary ? `<h2>Análise da IA</h2><div class="summary">${aiSummary}</div>` : ""}
       </body></html>
     `);
     printWindow.document.close();
@@ -552,13 +552,13 @@ Vencedor: ${winner || "Empate"} (${Object.entries(wins).map(([t, c]) => `${t}: $
                           {flags.length} flag{flags.length !== 1 ? "s" : ""}
                         </Badge>
                         {t === minRedFlags && (
-                          <Badge className="bg-bullish/20 text-bullish text-xs">Menos Riscos ✅</Badge>
+                          <Badge className="bg-bullish/20 text-bullish text-xs">Menos Riscos</Badge>
                         )}
                       </div>
                       {flags.length > 0 ? (
                         <ul className="space-y-1.5">
                           {flags.map((f, i) => (
-                            <li key={i} className="text-xs text-bearish/80 bg-bearish/10 rounded px-2 py-1.5">🚩 {f}</li>
+                            <li key={i} className="text-xs text-bearish/80 bg-bearish/10 rounded px-2 py-1.5">{f}</li>
                           ))}
                         </ul>
                       ) : (
