@@ -23,15 +23,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Keep the session in sync (token refresh, sign-out, etc.). Don't flip `loading`
+    // here — the bootstrap below owns that so we never render the app before a
+    // session exists.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      setLoading(false);
+      // No login: if the session ever ends, start a fresh anonymous one so the app stays usable.
+      if (event === "SIGNED_OUT") {
+        supabase.auth.signInAnonymously().catch(() => {});
+      }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    // No login screen: if there's no session, transparently create an anonymous one
+    // so the app "just works" the moment someone opens it. Every feature still runs
+    // against a real user id (RLS + edge functions are unchanged).
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setSession(session);
+      } else {
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (error) console.warn("Login anônimo indisponível:", error.message);
+        setSession(data?.session ?? null);
+      }
       setLoading(false);
-    });
+    })();
 
     return () => subscription.unsubscribe();
   }, []);

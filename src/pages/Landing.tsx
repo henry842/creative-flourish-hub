@@ -404,10 +404,10 @@ export default function Landing() {
             <a href="#duvidas" className="hover:text-foreground transition-colors">Dúvidas</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/auth")} className="hidden sm:inline-flex">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="hidden sm:inline-flex">
               Entrar
             </Button>
-            <Button size="sm" onClick={() => navigate("/auth")}>
+            <Button size="sm" onClick={() => navigate("/")}>
               Começar grátis
             </Button>
           </div>
@@ -434,7 +434,7 @@ export default function Landing() {
               <div className="mt-9 flex flex-col sm:flex-row gap-3">
                 <Button
                   size="lg"
-                  onClick={() => navigate("/auth")}
+                  onClick={() => navigate("/")}
                   className="h-12 px-7 text-base bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
                 >
                   Analisar meu primeiro PDF <ArrowRight className="h-4 w-4" />
@@ -572,7 +572,7 @@ export default function Landing() {
                 <Button
                   className="w-full mt-5"
                   variant={plan.highlight ? "default" : "outline"}
-                  onClick={() => navigate("/auth")}
+                  onClick={() => navigate("/")}
                 >
                   {plan.cta}
                 </Button>
@@ -618,7 +618,7 @@ export default function Landing() {
           </p>
           <Button
             size="lg"
-            onClick={() => navigate("/auth")}
+            onClick={() => navigate("/")}
             className="mt-9 h-12 px-8 text-base bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
           >
             Começar grátis <ArrowRight className="h-4 w-4" />
@@ -640,7 +640,7 @@ export default function Landing() {
               <a href="#produto" className="hover:text-foreground transition-colors">Produto</a>
               <a href="#planos" className="hover:text-foreground transition-colors">Planos</a>
               <a href="#duvidas" className="hover:text-foreground transition-colors">Dúvidas</a>
-              <button onClick={() => navigate("/auth")} className="hover:text-foreground transition-colors">Entrar</button>
+              <button onClick={() => navigate("/")} className="hover:text-foreground transition-colors">Entrar</button>
             </div>
           </div>
           <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

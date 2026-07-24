@@ -4,7 +4,6 @@ import {
   TrendingUp,
   Scale,
   Trophy,
-  LogOut,
   Sun,
   Moon,
   UserCircle,
@@ -13,7 +12,6 @@ import {
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { GroqCreditCounter } from "@/components/GroqCreditCounter";
 import { LogoMark } from "@/components/Brand";
@@ -46,7 +44,6 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const navigate = useNavigate();
-  const { signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -105,15 +102,6 @@ export function AppSidebar() {
         >
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           {!collapsed && <span className="ml-2 text-sm">{theme === "dark" ? "Tema claro" : "Tema escuro"}</span>}
-        </Button>
-        <Button
-          variant="ghost"
-          size={collapsed ? "icon" : "sm"}
-          onClick={signOut}
-          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && <span className="ml-2 text-sm">Sair</span>}
         </Button>
       </SidebarFooter>
     </Sidebar>

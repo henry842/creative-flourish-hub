@@ -87,7 +87,7 @@ const App = () => (
                 <Route path="/assets/:id" element={<ProtectedRoute><LazyPage><AssetDetail /></LazyPage></ProtectedRoute>} />
                 <Route path="/briefing" element={<ProtectedRoute><LazyPage><Briefing /></LazyPage></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><LazyPage><Profile /></LazyPage></ProtectedRoute>} />
-                <Route path="/pricing" element={<PublicRoute><LazyPage><Pricing /></LazyPage></PublicRoute>} />
+                <Route path="/pricing" element={<LazyPage><Pricing /></LazyPage>} />
                 <Route path="*" element={<LazyPage><NotFound /></LazyPage>} />
               </Routes>
             </BrowserRouter>

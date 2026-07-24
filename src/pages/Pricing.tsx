@@ -115,7 +115,7 @@ export default function Pricing() {
                 <Button
                   onClick={() => {
                     if (plan.name === "Free") {
-                      navigate("/auth");
+                      navigate("/");
                     } else {
                       window.open("https://wa.me/5571992683093?text=" + encodeURIComponent(`Olá! Tenho interesse no plano ${plan.name} do FinSight.`), "_blank");
                     }
