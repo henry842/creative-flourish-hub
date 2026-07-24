@@ -24,7 +24,7 @@ export default function Auth() {
     try {
       if (isForgot) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}reset-password`,
         });
         if (error) throw error;
         toast({ title: "Email enviado!", description: "Verifique sua caixa de entrada." });
@@ -39,7 +39,7 @@ export default function Auth() {
           password,
           options: {
             data: { display_name: displayName },
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
           },
         });
         if (error) throw error;
