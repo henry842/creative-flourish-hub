@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { enableLocalBackend, LOCAL_USER_ID } from "@/lib/localdb";
 
 interface AuthContextType {
   session: Session | null;
@@ -22,7 +23,8 @@ export const useAuth = () => useContext(AuthContext);
 // unavailable (disabled or project asleep). Read-only: RLS blocks writes without a
 // real session, but every screen stays navigable.
 const GUEST_USER = {
-  id: "00000000-0000-0000-0000-000000000000",
+  // Matches LOCAL_USER_ID so rows created locally belong to this identity.
+  id: LOCAL_USER_ID,
   aud: "guest",
   app_metadata: {},
   user_metadata: {},
@@ -56,7 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         const { data, error } = await supabase.auth.signInAnonymously();
         if (error || !data?.session) {
-          console.warn("Login anônimo indisponível — abrindo em modo somente leitura.", error?.message ?? "");
+          console.warn("Login anônimo indisponível — usando o backend local.", error?.message ?? "");
+          // Keep the product fully usable: data is served from this browser instead.
+          await enableLocalBackend().catch(() => {});
           setGuest(true);
         } else {
           setSession(data.session);
