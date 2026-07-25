@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
+import { generateBrief } from "@/lib/briefing";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -147,11 +148,7 @@ export default function Briefing() {
       // Ensure config is saved first
       await saveConfig();
 
-      const { data, error } = await supabase.functions.invoke("generate-brief", {
-        body: { user_id: user.id },
-      });
-
-      if (error) throw error;
+      await generateBrief(user.id);
 
       toast({ title: "Briefing gerado com sucesso!" });
       // Refresh briefs list

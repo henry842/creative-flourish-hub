@@ -2,6 +2,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { streamChat } from "@/lib/ai";
+import { analyzeDocument } from "@/lib/analysis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,7 +78,6 @@ interface Conversation {
   created_at: string;
 }
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export default function AssetDetail() {
   const { id: assetId } = useParams<{ id: string }>();
@@ -89,6 +90,7 @@ export default function AssetDetail() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
+  const [analyzeStage, setAnalyzeStage] = useState("");
   const [deletingDoc, setDeletingDoc] = useState<Document | null>(null);
 
   // Chat state
@@ -156,21 +158,36 @@ export default function AssetDetail() {
 
   // Analyze
   const handleAnalyze = async (doc: Document) => {
+    if (!user) return;
     setAnalyzing(doc.id);
+    setAnalyzeStage("Preparando…");
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-document`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.session?.access_token}` },
-        body: JSON.stringify({ document_id: doc.id, ticker: doc.ticker || asset?.ticker, asset_id: assetId }),
+      await analyzeDocument({
+        documentId: doc.id,
+        userId: user.id,
+        ticker: doc.ticker || asset?.ticker,
+        assetId,
+        onStage: (stage, detail) => {
+          const labels: Record<string, string> = {
+            reading: "Lendo o documento…",
+            extracting: detail ? `Extraindo texto (${detail})…` : "Extraindo texto do PDF…",
+            analyzing: "Analisando com IA…",
+            saving: "Salvando resultados…",
+          };
+          setAnalyzeStage(labels[stage] ?? "Processando…");
+        },
       });
-      if (!resp.ok) { const err = await resp.json(); throw new Error(err.error || "Erro"); }
-      toast({ title: "Análise concluída!" });
+      toast({ title: "Análise concluída" });
       fetchData();
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({
+        title: "Não foi possível analisar",
+        description: err?.message ?? "Erro inesperado.",
+        variant: "destructive",
+      });
     }
     setAnalyzing(null);
+    setAnalyzeStage("");
   };
 
   const handleDeleteDoc = async (doc: Document) => {
@@ -229,45 +246,19 @@ export default function AssetDetail() {
     let assistantContent = "";
     try {
       const allMessages = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
-      const resp = await fetch(CHAT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({ messages: allMessages, documentContext }),
+      await streamChat({
+        messages: allMessages,
+        documentContext,
+        onDelta: (delta) => {
+          assistantContent += delta;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant" && !last.id)
+              return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
+            return [...prev, { role: "assistant", content: assistantContent }];
+          });
+        },
       });
-
-      if (!resp.ok || !resp.body) throw new Error("Falha na conexão");
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx: number;
-        while ((idx = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantContent += content;
-              setMessages((prev) => {
-                const last = prev[prev.length - 1];
-                if (last?.role === "assistant" && !last.id)
-                  return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
-                return [...prev, { role: "assistant", content: assistantContent }];
-              });
-            }
-          } catch { buffer = line + "\n" + buffer; break; }
-        }
-      }
 
       if (assistantContent) {
         await supabase.from("messages").insert({ conversation_id: activeConv, role: "assistant", content: assistantContent });
@@ -365,7 +356,7 @@ export default function AssetDetail() {
                       {statusIcon(doc.status)}
                       <Button size="sm" onClick={() => handleAnalyze(doc)} disabled={analyzing === doc.id} className="gap-1">
                         {analyzing === doc.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-                        {analyzing === doc.id ? "..." : "Analisar"}
+                        {analyzing === doc.id ? (analyzeStage || "Analisando…") : "Analisar"}
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-destructive" onClick={() => setDeletingDoc(doc)}>
                         <Trash2 className="h-3.5 w-3.5" />

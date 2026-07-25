@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { streamChat } from "@/lib/ai";
 
 interface Message {
   id?: string;
@@ -51,7 +52,6 @@ interface Document {
   doc_type: string | null;
 }
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 const MAX_CONTEXT_CHARS = 12000;
 
 const GLOSSARY = [
@@ -291,50 +291,19 @@ export default function Chat() {
       const allMessages = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
       const documentContext = buildDocumentContext();
 
-      const resp = await fetch(CHAT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      await streamChat({
+        messages: allMessages,
+        documentContext,
+        onDelta: (delta) => {
+          assistantContent += delta;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant" && !last.id)
+              return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
+            return [...prev, { role: "assistant", content: assistantContent, created_at: new Date().toISOString() }];
+          });
         },
-        body: JSON.stringify({ messages: allMessages, documentContext }),
       });
-
-      if (resp.status === 429) { toast({ title: "Limite atingido", description: "Tente novamente em alguns instantes.", variant: "destructive" }); setIsStreaming(false); return; }
-      if (resp.status === 402) { toast({ title: "Créditos insuficientes", variant: "destructive" }); setIsStreaming(false); return; }
-      if (!resp.ok || !resp.body) throw new Error("Falha na conexão com IA");
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let newlineIndex: number;
-        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, newlineIndex);
-          buffer = buffer.slice(newlineIndex + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const c = parsed.choices?.[0]?.delta?.content;
-            if (c) {
-              assistantContent += c;
-              setMessages((prev) => {
-                const last = prev[prev.length - 1];
-                if (last?.role === "assistant" && !last.id)
-                  return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantContent } : m));
-                return [...prev, { role: "assistant", content: assistantContent, created_at: new Date().toISOString() }];
-              });
-            }
-          } catch { buffer = line + "\n" + buffer; break; }
-        }
-      }
 
       if (assistantContent) {
         await supabase.from("messages").insert({ conversation_id: activeConv, role: "assistant", content: assistantContent });

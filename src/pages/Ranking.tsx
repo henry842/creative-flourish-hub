@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
+import { streamChat } from "@/lib/ai";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -222,40 +223,17 @@ export default function Ranking() {
 Ranking atual:
 ${top.map((c, i) => `${i + 1}. ${c.ticker} — Score: ${c.overall_score}, Sentimento: ${c.sentiment}, Variação: ${c.prevScore !== null ? c.overall_score - c.prevScore : "primeira análise"}, Red Flags: ${c.red_flags.length}`).join("\n")}`;
 
-      const resp = await supabase.functions.invoke("chat", {
-        body: { messages: [{ role: "user", content: prompt }] },
-      });
-      if (resp.error) throw resp.error;
-
-      const reader = resp.data instanceof ReadableStream ? resp.data.getReader() : new Response(resp.data).body?.getReader();
-      if (!reader) throw new Error("No reader");
-
-      const decoder = new TextDecoder();
-      let buffer = "";
       let full = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx;
-        while ((idx = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ")) continue;
-          const json = line.slice(6).trim();
-          if (json === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(json);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) { full += content; setAiSummary(full); }
-          } catch {}
-        }
-      }
+      await streamChat({
+        messages: [{ role: "user", content: prompt }],
+        onDelta: (delta) => {
+          full += delta;
+          setAiSummary(full);
+        },
+      });
     } catch (e) {
       console.error(e);
-      toast.error("Erro ao gerar análise da IA");
+      toast.error(e instanceof Error ? e.message : "Erro ao gerar análise da IA");
     } finally {
       setAiLoading(false);
     }

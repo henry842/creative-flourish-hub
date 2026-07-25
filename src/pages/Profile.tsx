@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
+import { AISettings } from "@/components/AISettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { maskEmail } from "@/lib/security";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -184,6 +185,8 @@ export default function Profile() {
         title="Perfil"
         subtitle="Gerencie sua conta"
       />
+
+      <AISettings />
 
       {/* Display name */}
       <Card className="glass">

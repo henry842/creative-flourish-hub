@@ -15,6 +15,22 @@ score e receba um **briefing diário** automático.
 - **Briefing diário** — resumo agendado de notícias e variações de score da watchlist.
 - **Contas e planos** — autenticação, perfil e assinatura (Free / Pro / Enterprise).
 
+## Ativando a inteligência artificial
+
+O FinSight funciona com dois caminhos de IA, nessa ordem:
+
+1. **Servidor (Supabase Edge Functions)** — quando publicadas, a chave fica no servidor e o
+   usuário final não configura nada. Requer os segredos `GROQ_API_KEY` (e opcionalmente
+   `NEWS_API_KEY` para o briefing e `OCR_API_KEY`/`OCR_GATEWAY_URL` para PDFs escaneados).
+2. **Chave do próprio usuário** — se as functions não estiverem disponíveis, o app pede uma
+   chave em **Perfil → Inteligência artificial**. Ela é guardada apenas no navegador e
+   enviada somente ao provedor escolhido.
+
+Provedores suportados (todos compatíveis com a API OpenAI): **Groq** (recomendado, possui
+plano gratuito), **OpenRouter** e **OpenAI**. Nesse modo, a leitura do PDF acontece no
+próprio navegador, então análise, chat, comparação, ranking e briefing funcionam mesmo com
+o backend indisponível.
+
 ## Stack
 
 React 18 · TypeScript · Vite · Tailwind CSS · shadcn/ui (Radix) · TanStack Query · Recharts ·

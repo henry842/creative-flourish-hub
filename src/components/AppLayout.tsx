@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { AIStatusBanner } from "@/components/AIStatusBanner";
 import { LogoMark } from "@/components/Brand";
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -18,6 +19,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="flex-1" />
           </header>
           <main className="flex-1 overflow-auto">
+            <AIStatusBanner />
             <div className="mx-auto max-w-6xl p-5 sm:p-6 lg:p-8">{children}</div>
           </main>
         </div>
