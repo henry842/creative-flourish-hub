@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { streamChat } from "@/lib/ai";
 import { analyzeDocument } from "@/lib/analysis";
+import { openPrintReport, type ReportSection } from "@/lib/report";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import {
   ArrowLeft, Upload, FileText, Zap, Trash2, Clock, CheckCircle, AlertCircle,
-  Send, Bot, User, Plus, MessageSquare, RefreshCw, Copy,
+  Send, Bot, User, Plus, MessageSquare, RefreshCw, Copy, Download,
 } from "lucide-react";
 
 interface Asset {
@@ -190,6 +191,63 @@ export default function AssetDetail() {
     setAnalyzeStage("");
   };
 
+  const exportReport = () => {
+    const latest = healthScores[0];
+    if (!latest || !asset) return;
+
+    const sentimentLabel =
+      latest.sentiment === "bullish" ? "Bullish" : latest.sentiment === "bearish" ? "Bearish" : "Neutro";
+
+    const target =
+      latest.price_target_low && latest.price_target_high
+        ? `R$ ${latest.price_target_low} – R$ ${latest.price_target_high}`
+        : null;
+
+    const sections: ReportSection[] = [
+      {
+        type: "metrics",
+        title: "Subcategorias",
+        rows: [
+          { label: "Crescimento de receita", value: `${latest.revenue_growth}/100` },
+          { label: "Margem líquida", value: `${latest.net_margin}/100` },
+          { label: "Nível de endividamento", value: `${latest.debt_level}/100` },
+          { label: "Qualidade dos resultados", value: `${latest.earnings_quality}/100` },
+          { label: "Risco regulatório", value: `${latest.regulatory_risk}/100` },
+          { label: "Sentimento", value: sentimentLabel },
+          { label: "Confiança da análise", value: `${Math.round((latest.confidence ?? 0) * 100)}%` },
+          ...(target ? [{ label: "Preço-alvo estimado", value: target }] : []),
+        ],
+      },
+      {
+        type: "list",
+        title: "Pontos de atenção",
+        items: latest.red_flags ?? [],
+        tone: "danger",
+        empty: "Nenhum ponto de atenção identificado nesta análise.",
+      },
+      { type: "timeline", title: "Linha do tempo", items: latest.timeline_events ?? [] },
+    ];
+
+    if (latest.summary) sections.push({ type: "text", title: "Resumo", body: latest.summary });
+    if (latest.price_target_rationale) {
+      sections.push({ type: "text", title: "Justificativa do preço-alvo", body: latest.price_target_rationale });
+    }
+
+    const analysedAt = new Date(latest.created_at).toLocaleDateString("pt-BR");
+    const ok = openPrintReport({
+      title: asset.name,
+      subtitle: `${asset.ticker ? `${asset.ticker} · ` : ""}Análise de ${analysedAt} · ${documents.length} documento(s)`,
+      highlight: {
+        label: "Health Score",
+        value: `${latest.overall_score}`,
+        caption: latest.summary ? latest.summary.slice(0, 160) : undefined,
+      },
+      sections,
+    });
+
+    if (!ok) toast({ title: "Permita janelas pop-up para exportar o relatório.", variant: "destructive" });
+  };
+
   const handleDeleteDoc = async (doc: Document) => {
     await supabase.storage.from("documents").remove([doc.file_path]);
     await supabase.from("documents").delete().eq("id", doc.id);
@@ -297,18 +355,23 @@ export default function AssetDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/assets")}>
+      <div className="flex items-start gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/assets")} className="mt-1 shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
-          <h1 className="font-display text-2xl font-bold flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-2xl font-bold flex items-center gap-3 flex-wrap">
             {asset.name}
             {asset.ticker && <Badge variant="secondary" className="font-mono">{asset.ticker}</Badge>}
             <Badge variant="outline">{typeLabel[asset.asset_type] || asset.asset_type}</Badge>
           </h1>
           {asset.description && <p className="text-sm text-muted-foreground mt-1">{asset.description}</p>}
         </div>
+        {healthScores.length > 0 && (
+          <Button variant="outline" size="sm" onClick={exportReport} className="gap-2 shrink-0">
+            <Download className="h-4 w-4" /> Relatório
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="documents">

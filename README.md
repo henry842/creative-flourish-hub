@@ -13,6 +13,10 @@ score e receba um **briefing diário** automático.
 - **Modo Batalha** — comparação de dois ativos com gráfico radar e histórico salvo.
 - **Ranking** — carteira ordenada por score, com evolução ao longo do tempo.
 - **Briefing diário** — resumo agendado de notícias e variações de score da watchlist.
+- **Alertas automáticos** — quedas e altas de Health Score, viradas de sentimento, novos
+  pontos de atenção e risco regulatório elevado, derivados do histórico de análises.
+- **Relatórios em PDF** — exportação do relatório de um ativo ou de uma comparação, com a
+  identidade visual do produto (imprimir → salvar como PDF).
 - **Contas e planos** — autenticação, perfil e assinatura (Free / Pro / Enterprise).
 
 ## Ativando a inteligência artificial

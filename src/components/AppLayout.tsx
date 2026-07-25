@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AIStatusBanner } from "@/components/AIStatusBanner";
+import { AlertsMenu } from "@/components/AlertsMenu";
 import { LogoMark } from "@/components/Brand";
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -17,6 +18,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <span className="wordmark text-base">FinSight</span>
             </div>
             <div className="flex-1" />
+            <AlertsMenu />
           </header>
           <main className="flex-1 overflow-auto">
             <AIStatusBanner />

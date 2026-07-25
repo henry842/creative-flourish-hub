@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { streamChat } from "@/lib/ai";
+import { openPrintReport, type ReportSection } from "@/lib/report";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -251,35 +252,38 @@ Vencedor: ${winner || "Empate"} (${Object.entries(wins).map(([t, c]) => `${t}: $
 
   // Export PDF
   const exportPDF = () => {
-    const el = printRef.current;
-    if (!el) return;
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    printWindow.document.write(`
-      <html><head><title>Análise Comparativa - ${selectedTickers.join(" vs ")}</title>
-      <style>
-        body { font-family: 'Inter', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 40px; }
-        h1 { text-align: center; font-size: 24px; margin-bottom: 8px; }
-        h2 { font-size: 18px; margin-top: 24px; border-bottom: 1px solid #333; padding-bottom: 8px; }
-        .winner { text-align: center; font-size: 20px; color: #4ade80; margin: 16px 0; }
-        .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; }
-        .flags { margin-top: 16px; }
-        .flag { background: #2a1a1a; padding: 4px 8px; margin: 4px; display: inline-block; border-radius: 4px; font-size: 12px; color: #f87171; }
-        .summary { background: #1e1e3a; padding: 16px; border-radius: 8px; margin-top: 16px; line-height: 1.6; white-space: pre-wrap; }
-        @media print { body { background: white; color: black; } .flag { background: #fee; color: #c00; } .summary { background: #f0f0ff; } .winner { color: #16a34a; } }
-      </style></head><body>
-      <h1>Análise Comparativa</h1>
-      <p style="text-align:center;color:#888;">${selectedTickers.join(" vs ")} — ${new Date().toLocaleDateString("pt-BR")}</p>
-      <div class="winner">${winner ? `${winner} vence ${Object.entries(wins).map(([t, c]) => `${t}: ${c}`).join(" × ")}` : "Empate!"}</div>
-      <h2>Métricas por Categoria</h2>
-      ${categories.map(({ key, label }) => `<div class="metric"><span>${label}</span><span>${selectedScores.map((s, i) => `${selectedTickers[i]}: ${s[key]}`).join(" | ")}</span></div>`).join("")}
-      <h2>Red Flags</h2>
-      ${selectedTickers.map((t) => `<div><strong>${t}</strong> (${redFlagsMap[t]?.length || 0}):<div class="flags">${(redFlagsMap[t] || []).map((f) => `<span class="flag">${f}</span>`).join("") || "<span style='color:#888'>Nenhuma</span>"}</div></div>`).join("")}
-      ${aiSummary ? `<h2>Análise da IA</h2><div class="summary">${aiSummary}</div>` : ""}
-      </body></html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => { printWindow.print(); }, 500);
+    const sections: ReportSection[] = [
+      {
+        type: "metrics",
+        title: "Métricas por categoria",
+        rows: categories.map(({ key, label }) => ({
+          label,
+          value: selectedScores.map((s, i) => `${selectedTickers[i]}: ${s[key]}`).join("   |   "),
+        })),
+      },
+      ...selectedTickers.map((t): ReportSection => ({
+        type: "list",
+        title: `Pontos de atenção — ${t}`,
+        items: redFlagsMap[t] ?? [],
+        tone: "danger",
+        empty: "Nenhum ponto de atenção identificado.",
+      })),
+    ];
+
+    if (aiSummary) sections.push({ type: "text", title: "Leitura da IA", body: aiSummary });
+
+    const ok = openPrintReport({
+      title: "Análise comparativa",
+      subtitle: selectedTickers.join("  vs  "),
+      highlight: {
+        label: winner ? "Vencedor" : "Resultado",
+        value: winner || "Empate",
+        caption: Object.entries(wins).map(([t, c]) => `${t}: ${c}`).join("  ·  "),
+      },
+      sections,
+    });
+
+    if (!ok) toast.error("Permita janelas pop-up para exportar o relatório.");
   };
 
   const availableFor = (exclude: string[]) => tickers.filter((t) => !exclude.includes(t));
